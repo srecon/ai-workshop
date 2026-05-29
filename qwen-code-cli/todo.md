@@ -1,1 +1,3 @@
-1. Try llama.cpp
+- [ ] 1. Try llama.cpp
+- [x] 2. Add skills
+- [ ] 3. Add MCP server
