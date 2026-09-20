@@ -1,0 +1,95 @@
+schema_version: '1.0'
+language: ru
+status_values:
+- PASS
+- ERROR
+- MANUAL_REVIEW
+- N/A
+- NOT_COVERED
+check_states:
+- DETECTED
+- NOT_DETECTED
+- UNKNOWN
+- NOT_APPLICABLE
+evidence_format: <file>:<line> — <snippet or detected fact>
+execution_notes:
+- Dependency presence is evidence, not automatic compliance unless the rule explicitly
+  says so.
+- Do not invent missing configuration, endpoints, brokers, topics, secrets, APIs or
+  corporate class names.
+- Unknown repository scope/configuration must not be converted to a confirmed absence.
+rule_id: PR-AUDIT-001
+name: Единый аудит
+requirement: TSCPR_1-CC-01-05
+standard_source: requirements/platform_ready_5.3.1.md
+scope:
+  standard_scope: Все
+  applicability: Требование применимо ко всем проектам с событиями, подлежащими аудиту.
+components:
+- unified-audit
+checks:
+- id: audit_dependency
+  purpose: Наличие корпоративного клиента Единого аудита
+  sources:
+  - type: maven_dependency
+    glob: '**/pom.xml'
+    dependencies:
+    - groupId: ru.sbt.pvm
+      artifactId: audit2-proxy-client
+  result: DETECTED when dependency coordinates are found; otherwise NOT_DETECTED.
+- id: audit_code_usage
+  purpose: Фактическое использование клиента/прокси аудита в production code
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - ru\.sbt\.pvm\.audit2
+    - AuditClient
+    - AuditProxy
+    - AuditService
+    - audit2
+  result: DETECTED when production Java usage is found; otherwise NOT_DETECTED.
+- id: audit_configuration
+  purpose: Конфигурация клиента аудита, если она присутствует отдельно
+  sources:
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - audit2
+    - unified-audit
+    - audit.*url
+    - audit.*endpoint
+  result: DETECTED when explicit audit configuration is found; otherwise NOT_DETECTED.
+decisions:
+- when:
+    all:
+    - check: audit_dependency
+      equals: DETECTED
+    - check: audit_code_usage
+      equals: DETECTED
+  status: PASS
+  confidence: HIGH
+  reason: Обнаружена корпоративная dependency и её использование в production code.
+- when:
+    any:
+    - check: audit_dependency
+      equals: DETECTED
+    - check: audit_code_usage
+      equals: DETECTED
+    - check: audit_configuration
+      equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Найдены признаки интеграции, но недостаточно evidence для автоматического
+    подтверждения фактической регистрации событий аудита.
+- when:
+    all:
+    - check: audit_dependency
+      equals: NOT_DETECTED
+    - check: audit_code_usage
+      equals: NOT_DETECTED
+    - check: audit_configuration
+      equals: NOT_DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Интеграция с АС «Единый аудит» не обнаружена.
+recommendation: Использовать утверждённый корпоративный компонент Unified Audit и
+  подтвердить фактическую отправку требуемых audit events.

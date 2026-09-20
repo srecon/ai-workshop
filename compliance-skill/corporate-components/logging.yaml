@@ -1,0 +1,19 @@
+id: platform-logging
+type: platform_component
+name: Тенгри / Platform V Monitor LOGA
+implements_requirements:
+- TSCPR_1-CC-02-05
+approved_delivery_schemes:
+- Fluent Bit sidecar -> Kafka LOGA
+- Direct integration with АС «Тенгри» (manual verification)
+- Agent LOGA (ALOG) sidecar
+application_logging_frameworks:
+- groupId: org.slf4j
+  artifactId: slf4j-api
+- groupId: org.apache.logging.log4j
+  artifactId: log4j-core
+- groupId: org.springframework.boot
+  artifactId: spring-boot-starter-logging
+capabilities:
+- logging
+- tengri-delivery

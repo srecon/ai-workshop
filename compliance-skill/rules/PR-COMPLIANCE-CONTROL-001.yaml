@@ -1,0 +1,131 @@
+schema_version: '1.0'
+language: ru
+status_values:
+- PASS
+- ERROR
+- MANUAL_REVIEW
+- N/A
+- NOT_COVERED
+check_states:
+- DETECTED
+- NOT_DETECTED
+- UNKNOWN
+- NOT_APPLICABLE
+evidence_format: <file>:<line> — <snippet or detected fact>
+execution_notes:
+- Dependency presence is evidence, not automatic compliance unless the rule explicitly
+  says so.
+- Do not invent missing configuration, endpoints, brokers, topics, secrets, APIs or
+  corporate class names.
+- Unknown repository scope/configuration must not be converted to a confirmed absence.
+rule_id: PR-COMPLIANCE-CONTROL-001
+name: Комплаенс-контроль через БХБ109
+requirement: TSCPR_1-CB-15-05
+standard_source: requirements/platform_ready_5.3.1.md
+scope:
+  standard_scope: АС/ФП ППРБ (продуктовые фабрики)
+  applicability: Из code base нельзя надёжно определить, что система является продуктовой
+    фабрикой ППРБ. Поэтому scope должен быть подтверждён явно или результат остаётся
+    MANUAL_REVIEW.
+checks:
+- id: financial_operation_signal_strong
+  purpose: Сильные признаки финансовых операций
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - class .*Transaction
+    - class .*Transfer
+    - class .*Payment
+    - class .*Deposit
+    - class .*Withdrawal
+    - class .*Payout
+    - class .*Refund
+    - /(transfer|payment|transaction|deposit|withdrawal|payout|refund)
+    - TransactionService|PaymentService|TransferService|PaymentProcessor|TransferProcessor
+- id: financial_operation_signal_weak
+  purpose: Слабые доменные признаки, требующие ручной проверки
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - class .*Account
+    - class .*Invoice
+    - class .*Billing
+    - class .*Loan
+    - class .*Credit
+    - class .*Card
+- id: pprb_product_factory_scope
+  purpose: Явное указание ППРБ/продуктовой фабрики
+  sources:
+  - glob: '**/*.{md,yml,yaml,properties,xml,json}'
+    patterns:
+    - (?i)ППРБ
+    - (?i)PPRB
+    - (?i)продуктовая фабрика
+    - (?i)product factory
+- id: bhb109_integration
+  purpose: Evidence интеграции с БХБ109 Online Compliance Control
+  sources:
+  - glob: '**/pom.xml'
+    patterns:
+    - bhb109|bhb-109|online-compliance|occ-starter|compliance-control|aml-facade
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - aml-facade|amlonl|aml4|bhb109|bhb-109|compliance\.url|occ\.
+    - ci00744092|CI00744092
+    - synapse-consumerid|x-synapse-rquid
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - amlonl|aml-facade|aml4|ci00744092
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - aml-facade|/v3/decision
+    - Bhb109|BHB109|OnlineCompliance|ComplianceControl|OccClient|AmlFacade
+    - synapse-consumerid|x-synapse-rquid
+    - serviceCode|OccBypass|BYPASS_
+decisions:
+- when:
+    all:
+    - check: financial_operation_signal_strong
+      equals: NOT_DETECTED
+    - check: financial_operation_signal_weak
+      equals: NOT_DETECTED
+  status: N/A
+  confidence: HIGH
+  reason: В code base не найдены признаки финансовых операций. Требование не активируется
+    автоматически.
+- when:
+    all:
+    - check: pprb_product_factory_scope
+      equals: DETECTED
+    - check: financial_operation_signal_strong
+      equals: DETECTED
+    - check: bhb109_integration
+      equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Подтверждены scope ППРБ/продуктовой фабрики и признаки интеграции; полноту
+    контроля операций необходимо проверить вручную.
+- when:
+    all:
+    - check: pprb_product_factory_scope
+      equals: DETECTED
+    - check: financial_operation_signal_strong
+      equals: DETECTED
+    - check: bhb109_integration
+      equals: NOT_DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Для подтверждённой продуктовой фабрики ППРБ не обнаружена интеграция с АС
+    БХБ109 Online Compliance Control.
+- when:
+    any:
+    - check: financial_operation_signal_strong
+      equals: DETECTED
+    - check: financial_operation_signal_weak
+      equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Есть признаки финансовых операций, но применимость именно к продуктовой
+    фабрике ППРБ не доказана code base.
+recommendation: Сначала подтвердить applicability к продуктовой фабрике ППРБ, затем
+  проверить интеграцию и полноту использования БХБ109.

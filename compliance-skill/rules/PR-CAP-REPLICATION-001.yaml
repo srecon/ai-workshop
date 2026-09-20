@@ -1,0 +1,117 @@
+schema_version: '1.0'
+language: ru
+status_values:
+- PASS
+- ERROR
+- MANUAL_REVIEW
+- N/A
+- NOT_COVERED
+check_states:
+- DETECTED
+- NOT_DETECTED
+- UNKNOWN
+- NOT_APPLICABLE
+evidence_format: <file>:<line> — <snippet or detected fact>
+execution_notes:
+- Dependency presence is evidence, not automatic compliance unless the rule explicitly
+  says so.
+- Do not invent missing configuration, endpoints, brokers, topics, secrets, APIs or
+  corporate class names.
+- Unknown repository scope/configuration must not be converted to a confirmed absence.
+rule_id: PR-CAP-REPLICATION-001
+name: Технологическая готовность к репликации в КАП
+requirement: TSCPR_1-CB-47-05.3
+standard_source: requirements/platform_ready_5.3.1.md
+scope:
+  standard_scope: Все (для классификаций PR02.*, PR03.02)
+  applicability: Стандарт определяет проверку как ручную. Code-base analysis собирает
+    evidence, но не заменяет архитектурный manual review.
+components:
+- cap-replication-tsa
+checks:
+- id: db_usage
+  purpose: Есть данные/БД для репликации
+  sources:
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - spring\.datasource
+    - 'jdbc:'
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - '@Entity'
+    - '@Table'
+    - JpaRepository
+    - EntityManager
+    - JdbcTemplate
+  - glob: '**/*.sql'
+    patterns:
+    - CREATE\s+TABLE
+- id: tsa_dependency
+  purpose: TSA Kafka starter как implementation evidence
+  sources:
+  - type: maven_dependency
+    glob: '**/pom.xml'
+    dependencies:
+    - groupId: sbp.ts.pprbod
+      artifactId: pprbod-transport-kafka-lib-starter
+- id: replication_code
+  purpose: Change capture/streaming integration evidence
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - KafkaTemplate|@KafkaListener|ProducerRecord|Replication|ChangeCapture|CDC
+- id: replication_config
+  purpose: Replication/Kafka configuration evidence
+  sources:
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - spring\.kafka
+    - replication
+    - cdc
+    - capture
+- id: initial_export
+  purpose: Initial export evidence
+  sources:
+  - glob: '**/*.{md,yml,yaml,properties,java,sql}'
+    patterns:
+    - InitialExport|initial[-_ ]export|bootstrap.*export|snapshot.*export
+- id: data_quality
+  purpose: Technical data quality control evidence
+  sources:
+  - glob: '**/*.{md,yml,yaml,properties,java}'
+    patterns:
+    - DataQuality|data[-_ ]quality|technical.*quality
+- id: drp
+  purpose: DRP evidence
+  sources:
+  - glob: '**/*.{md,yml,yaml,properties,java}'
+    patterns:
+    - DRP|disaster|recovery.*plan|failover
+- id: cap_integration_flow
+  purpose: Explicit integration flow/scenario into КАП
+  sources:
+  - glob: '**/*.{md,adoc,mmd,svg,drawio,json,yml,yaml}'
+    patterns:
+    - КАП|CAP|replication.*scenario|replication.*flow
+decisions:
+- when:
+    check: db_usage
+    equals: NOT_DETECTED
+  status: N/A
+  confidence: HIGH
+  reason: Признаки использования БД не обнаружены; репликация данных из проекта не
+    активируется автоматически.
+- when:
+    check: db_usage
+    equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: HIGH
+  reason: Стандарт помечает требование как ручное. Code-base evidence может подтвердить
+    отдельные технические признаки, но не заменяет проверку change capture, streaming,
+    initial export, data quality, DRP и reference architecture/scenario целиком.
+recommendation: Использовать механизмы репликации, определённые референсной архитектурой,
+  либо предоставить интеграционный поток/сценарий репликации в КАП с подтверждением
+  всех обязательных элементов.
+follow_references:
+- Если найден documentation/configuration/reference to external replication artifacts,
+  прочитать связанный файл, когда это возможно.

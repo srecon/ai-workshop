@@ -1,0 +1,17 @@
+id: platform-persistence
+type: platform_component
+name: Platform V Persistence
+description: Корпоративный слой изоляции/persistence для требования TSCPR_1-CB-38-05.
+implements_requirements:
+- TSCPR_1-CB-38-05
+maven:
+  dependencies:
+  - groupId: sbp.integration.orm
+    artifactId: sbp-hibernate-standin-starter
+    version: ${hibernate-plugins.version}
+  - groupId: sbp.integration.orm
+    artifactId: sbp-hibernate-cap-starter
+    version: ${hibernate-plugins.version}
+capabilities:
+- data-isolation
+- persistence

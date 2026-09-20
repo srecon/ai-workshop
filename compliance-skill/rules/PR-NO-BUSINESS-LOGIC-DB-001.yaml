@@ -1,0 +1,121 @@
+schema_version: '1.0'
+language: ru
+status_values:
+- PASS
+- ERROR
+- MANUAL_REVIEW
+- N/A
+- NOT_COVERED
+check_states:
+- DETECTED
+- NOT_DETECTED
+- UNKNOWN
+- NOT_APPLICABLE
+evidence_format: <file>:<line> — <snippet or detected fact>
+execution_notes:
+- Dependency presence is evidence, not automatic compliance unless the rule explicitly
+  says so.
+- Do not invent missing configuration, endpoints, brokers, topics, secrets, APIs or
+  corporate class names.
+- Unknown repository scope/configuration must not be converted to a confirmed absence.
+rule_id: PR-NO-BUSINESS-LOGIC-DB-001
+name: Запрет бизнес-логики в СУБД
+requirement: TSCPR_1-CB-39-05
+standard_source: requirements/platform_ready_5.3.1.md
+scope:
+  standard_scope: Все
+  applicability: Все проекты с DB scripts/migrations.
+checks:
+- id: stored_objects_prod
+  purpose: CREATE PROCEDURE/FUNCTION/TRIGGER в production SQL/migrations
+  sources:
+  - glob: '**/*.sql'
+    exclude_globs:
+    - '**/src/test/**'
+    - '**/test/**'
+    - '**/testdata/**'
+    patterns:
+    - CREATE\s+(OR\s+REPLACE\s+)?PROCEDURE
+    - CREATE\s+(OR\s+REPLACE\s+)?FUNCTION
+    - CREATE\s+(OR\s+REPLACE\s+)?TRIGGER
+- id: liquibase_objects
+  purpose: Liquibase createProcedure/createTrigger и inline SQL
+  sources:
+  - glob: '**/changelog/**/*.xml'
+    patterns:
+    - <createProcedure
+    - <createTrigger
+    - CREATE\s+(OR\s+REPLACE\s+)?(PROCEDURE|FUNCTION|TRIGGER)
+  - glob: '**/changelog/**/*.{yaml,yml}'
+    patterns:
+    - createProcedure
+    - createTrigger
+    - CREATE\s+(OR\s+REPLACE\s+)?(PROCEDURE|FUNCTION|TRIGGER)
+- id: liquibase_sqlfile
+  purpose: Liquibase sqlFile требует чтения referenced SQL
+  sources:
+  - glob: '**/changelog/**/*.xml'
+    patterns:
+    - <sqlFile
+  - glob: '**/changelog/**/*.{yaml,yml}'
+    patterns:
+    - 'sqlFile:'
+- id: jobs_prod
+  purpose: DB jobs/schedulers; existence alone does not prove business logic
+  sources:
+  - glob: '**/*.sql'
+    exclude_globs:
+    - '**/src/test/**'
+    - '**/test/**'
+    - '**/testdata/**'
+    patterns:
+    - DBMS_SCHEDULER
+    - DBMS_JOB
+    - pg_cron|pgAgent
+    - CREATE\s+EVENT
+    - sp_add_job|sp_add_schedule|sp_add_jobstep
+- id: test_stored_objects
+  purpose: Stored objects only in test SQL
+  sources:
+  - glob: '**/src/test/**/*.sql'
+    patterns:
+    - CREATE\s+(OR\s+REPLACE\s+)?(PROCEDURE|FUNCTION|TRIGGER)
+- id: sql_files
+  purpose: Presence of SQL/migration files
+  sources:
+  - glob: '**/*.sql'
+    patterns:
+    - CREATE|ALTER|INSERT|UPDATE|DELETE
+follow_references:
+- Если Liquibase <sqlFile> найден, прочитать referenced SQL file и применить stored_objects_prod
+  scan.
+decisions:
+- when:
+    any:
+    - check: stored_objects_prod
+      equals: DETECTED
+    - check: liquibase_objects
+      equals: DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Обнаружены хранимые процедуры/функции/триггеры в production database artifacts.
+- when:
+    check: jobs_prod
+    equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Обнаружены DB jobs/schedulers; необходимо установить, реализуют ли они бизнес-логику.
+- when:
+    all:
+    - check: stored_objects_prod
+      equals: NOT_DETECTED
+    - check: liquibase_objects
+      equals: NOT_DETECTED
+    - check: jobs_prod
+      equals: NOT_DETECTED
+  status: PASS
+  confidence: HIGH
+  reason: Production database artifacts не содержат запрещённых stored objects или
+    job patterns.
+recommendation: Устранить production stored procedures/functions/triggers, реализующие
+  бизнес-логику; DB jobs дополнительно проверить вручную.

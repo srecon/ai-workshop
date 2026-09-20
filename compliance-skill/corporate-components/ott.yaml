@@ -1,0 +1,24 @@
+id: ott-mtls-auth
+type: platform_component
+name: OTT / mTLS
+implements_requirements:
+- TSCPR_1-4C-09-05
+maven_legacy_3g:
+- groupId: ru.sbt.ss
+  artifactId: kafka-ott-signature-interceptor_2.13
+- groupId: sbp.com.sbt.ott
+  artifactId: ott_client-base-impl
+- groupId: sbp.com.sbt.ott
+  artifactId: ott-jsonrpc-hb-client
+platform_signals_4g:
+- istio-proxy
+- ott-sidecar
+- OTT_* configuration
+- UDS socket
+- EnvoyFilter
+capabilities:
+- authentication
+- authorization
+- ott
+- mtls
+- service-mesh-security

@@ -1,0 +1,16 @@
+id: cap-replication-tsa
+type: platform_component
+name: CAP Replication via TSA
+implements_requirements:
+- TSCPR_1-CB-47-05.3
+maven:
+  dependencies:
+  - groupId: sbp.ts.pprbod
+    artifactId: pprbod-transport-kafka-lib-starter
+    version: 5.4.0-7
+capabilities:
+- change-capture
+- streaming-delivery
+- cap-replication
+note: Dependency is an implementation evidence signal, not sufficient for an automatic
+  PASS because the standard marks the requirement as manual.

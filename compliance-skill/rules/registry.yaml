@@ -1,0 +1,47 @@
+registry_version: '1.0'
+standard:
+  name: Platform-Ready
+  version: 5.3.1
+  requirements_file: requirements/platform_ready_5.3.1.md
+execution_model:
+  skill: SKILL.MD
+  rule_source: rules/*.yaml
+  component_source: corporate-components/*.yaml
+  rule_is_source_of_truth: true
+rules:
+- rule_id: PR-AUDIT-001
+  requirement: TSCPR_1-CC-01-05
+  file: rules/PR-AUDIT-001.yaml
+  enabled: true
+- rule_id: PR-LOGGING-001
+  requirement: TSCPR_1-CC-02-05
+  file: rules/PR-LOGGING-001.yaml
+  enabled: true
+- rule_id: PR-OTT-MTLS-001
+  requirement: TSCPR_1-4C-09-05
+  file: rules/PR-OTT-MTLS-001.yaml
+  enabled: true
+- rule_id: PR-CONTAINERIZATION-001
+  requirement: TSCPR_1-CC-60-05
+  file: rules/PR-CONTAINERIZATION-001.yaml
+  enabled: true
+- rule_id: PR-COMPLIANCE-CONTROL-001
+  requirement: TSCPR_1-CB-15-05
+  file: rules/PR-COMPLIANCE-CONTROL-001.yaml
+  enabled: true
+- rule_id: PR-PERSISTENCE-001
+  requirement: TSCPR_1-CB-38-05
+  file: rules/PR-PERSISTENCE-001.yaml
+  enabled: true
+- rule_id: PR-NO-BUSINESS-LOGIC-DB-001
+  requirement: TSCPR_1-CB-39-05
+  file: rules/PR-NO-BUSINESS-LOGIC-DB-001.yaml
+  enabled: true
+- rule_id: PR-NO-SERIAL-IDENTIFIERS-001
+  requirement: TSCPR_1-CB-41-05
+  file: rules/PR-NO-SERIAL-IDENTIFIERS-001.yaml
+  enabled: true
+- rule_id: PR-CAP-REPLICATION-001
+  requirement: TSCPR_1-CB-47-05.3
+  file: rules/PR-CAP-REPLICATION-001.yaml
+  enabled: true

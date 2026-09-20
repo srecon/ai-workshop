@@ -1,0 +1,19 @@
+catalog_version: '1.0'
+purpose: Каталог корпоративных компонентов. Не содержит compliance decision logic.
+principle: Наличие компонента является evidence наличия компонента, но не автоматически
+  означает compliance.
+components:
+- id: platform-persistence
+  file: corporate-components/persistence.yaml
+- id: platform-dataspace
+  file: corporate-components/dataspace.yaml
+- id: cap-replication-tsa
+  file: corporate-components/cap-replication-tsa.yaml
+- id: unified-audit
+  file: corporate-components/audit.yaml
+- id: platform-logging
+  file: corporate-components/logging.yaml
+- id: ott-mtls-auth
+  file: corporate-components/ott.yaml
+- id: platform-standin
+  file: corporate-components/standin.yaml

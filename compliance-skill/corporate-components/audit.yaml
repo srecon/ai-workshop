@@ -1,0 +1,12 @@
+id: unified-audit
+type: platform_component
+name: Unified Audit
+implements_requirements:
+- TSCPR_1-CC-01-05
+maven:
+  dependencies:
+  - groupId: ru.sbt.pvm
+    artifactId: audit2-proxy-client
+    version: ${audit2.version}
+capabilities:
+- audit-events

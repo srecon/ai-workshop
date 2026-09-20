@@ -1,0 +1,236 @@
+schema_version: '1.0'
+language: ru
+status_values:
+- PASS
+- ERROR
+- MANUAL_REVIEW
+- N/A
+- NOT_COVERED
+check_states:
+- DETECTED
+- NOT_DETECTED
+- UNKNOWN
+- NOT_APPLICABLE
+evidence_format: <file>:<line> — <snippet or detected fact>
+execution_notes:
+- Dependency presence is evidence, not automatic compliance unless the rule explicitly
+  says so.
+- Do not invent missing configuration, endpoints, brokers, topics, secrets, APIs or
+  corporate class names.
+- Unknown repository scope/configuration must not be converted to a confirmed absence.
+rule_id: PR-OTT-MTLS-001
+name: OTT / mTLS для API-вызовов
+requirement: TSCPR_1-4C-09-05
+standard_source: requirements/platform_ready_5.3.1.md
+scope:
+  standard_scope: Все
+  applicability: Требование относится к API-вызовам; если исходящих API-вызовов не
+    найдено, применимость не подтверждена.
+components:
+- ott-mtls-auth
+checks:
+- id: api_calls
+  purpose: Наличие исходящих API/integration calls
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - FeignClient
+    - RestTemplate
+    - WebClient
+    - HttpClient
+    - KafkaTemplate
+    - ProducerRecord
+    - GrpcClient
+    - ManagedChannel
+    - Channel
+  description: Сигналы исходящих integration/API calls; messaging clients считаются
+    integration calls.
+- id: synapse_annotation_true
+  purpose: Synapse/Istio sidecar injection явно включён
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - sidecar\.istio\.io/inject:\s*["']?true["']?
+  unknown_if_no_source: true
+- id: istio_proxy
+  purpose: istio-proxy присутствует в Pod spec
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - name:\s*istio-proxy
+    - image:.*istio-proxy
+  unknown_if_no_source: true
+- id: synapse_config_true
+  purpose: Synapse/Istio явно включён configuration
+  sources:
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - synapse\.enabled\s*[:=]\s*true
+    - istio\.enabled\s*[:=]\s*true
+  unknown_if_no_source: true
+- id: ott_sidecar
+  purpose: OTT sidecar 4G обнаружен
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - name:\s*ott-sidecar
+    - image:.*ott-sidecar
+- id: ott_config
+  purpose: OTT_* configuration обнаружена
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - OTT_MODULE_ID
+    - OTT_SERVICE_HOSTS
+    - OTT_SERVICE_URL
+    - OTT_CERTSTORE_TYPE
+- id: ott_uds
+  purpose: UDS socket для OTT
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - ott-uds-socket
+    - /mnt/ott-uds-socket
+    - ott\.socket
+- id: envoyfilter_ott
+  purpose: EnvoyFilter связывает Istio с OTT
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - kind:\s*EnvoyFilter
+    - name:.*ott
+- id: ott_3g_maven
+  purpose: Legacy OTT Maven dependency
+  sources:
+  - type: maven_dependency
+    glob: '**/pom.xml'
+    dependencies:
+    - groupId: ru.sbt.ss
+      artifactId: kafka-ott-signature-interceptor_2.13
+    - groupId: sbp.com.sbt.ott
+      artifactId: ott_client-base-impl
+    - groupId: sbp.com.sbt.ott
+      artifactId: ott-jsonrpc-hb-client
+- id: ott_3g_java
+  purpose: Legacy OTT Java usage
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - sbp\.com\.sbt\.ott
+    - ru\.sbt\.ss\.ott
+    - OttClient|OttInterceptor|OttToken|OttSigner|OneTimeToken
+- id: mtls_protocol
+  purpose: TLS 1.2+ явно настроен
+  sources:
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - TLSv1\.2
+    - TLSv1\.3
+    - ssl\.protocol
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - TLSv1\.2
+    - TLSv1\.3
+- id: mtls_client_auth
+  purpose: Взаимная аутентификация/проверка client certificate
+  sources:
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - client-auth
+    - clientAuth
+    - needClientAuth
+    - truststore
+    - trust-store
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - needClientAuth
+    - clientAuth
+    - TrustManager
+    - X509Certificate
+- id: mtls_cert_material
+  purpose: Certificate/trust material
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - kind:\s*Secret
+    - tls\.crt
+    - tls\.key
+    - keystore
+    - truststore
+derived_flags:
+- id: synapse_active
+  definition: TRUE when explicit Synapse/Istio activation evidence is DETECTED (inject=true
+    OR istio-proxy OR explicit enabled=true). FALSE only when relevant deployment/config
+    sources were inspected and no activation evidence exists. UNKNOWN when runtime/deployment
+    evidence is unavailable.
+- id: ott_4g_ready
+  definition: true when ott_sidecar AND ott_config are DETECTED; UDS and EnvoyFilter
+    are supporting evidence.
+- id: ott_3g_ready
+  definition: true when ott_3g_maven AND ott_3g_java are DETECTED.
+- id: mtls_ready
+  definition: true when mtls_protocol AND mtls_client_auth AND mtls_cert_material
+    are DETECTED.
+decisions:
+- when:
+    all:
+    - check: api_calls
+      equals: NOT_DETECTED
+  status: N/A
+  confidence: MEDIUM
+  reason: Исходящие integration/API calls не обнаружены; применимость требования по
+    code-base не подтверждена.
+- when:
+    all:
+    - derived: synapse_active
+      equals: true
+    - any:
+      - derived: ott_4g_ready
+        equals: true
+      - derived: ott_3g_ready
+        equals: true
+  status: PASS
+  confidence: HIGH
+  reason: При активном Synapse обнаружен OTT-путь.
+- when:
+    all:
+    - derived: synapse_active
+      equals: true
+  status: ERROR
+  confidence: HIGH
+  reason: API-вызовы присутствуют и Synapse активен, но OTT integration evidence не
+    обнаружен.
+- when:
+    all:
+    - derived: synapse_active
+      equals: UNKNOWN
+    - check: api_calls
+      equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Невозможно определить Synapse Service Mesh по доступным repository artifacts;
+    необходимо проверить platform/runtime configuration.
+- when:
+    all:
+    - derived: synapse_active
+      equals: false
+    - derived: mtls_ready
+      equals: true
+  status: PASS
+  confidence: MEDIUM
+  reason: Без Synapse обнаружены TLS 1.2+ и признаки mutual authentication/certificate
+    trust.
+- when:
+    all:
+    - derived: synapse_active
+      equals: false
+    - derived: mtls_ready
+      equals: false
+    - check: api_calls
+      equals: DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: API-вызовы присутствуют, Synapse не активен, но достаточная mTLS evidence
+    не найдена.
+recommendation: При Synapse подтверждать OTT; без Synapse подтверждать полный mTLS
+  1.2+ путь и авторизацию на основе сертификата источника.

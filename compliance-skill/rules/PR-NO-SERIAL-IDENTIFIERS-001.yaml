@@ -1,0 +1,117 @@
+schema_version: '1.0'
+language: ru
+status_values:
+- PASS
+- ERROR
+- MANUAL_REVIEW
+- N/A
+- NOT_COVERED
+check_states:
+- DETECTED
+- NOT_DETECTED
+- UNKNOWN
+- NOT_APPLICABLE
+evidence_format: <file>:<line> — <snippet or detected fact>
+execution_notes:
+- Dependency presence is evidence, not automatic compliance unless the rule explicitly
+  says so.
+- Do not invent missing configuration, endpoints, brokers, topics, secrets, APIs or
+  corporate class names.
+- Unknown repository scope/configuration must not be converted to a confirmed absence.
+rule_id: PR-NO-SERIAL-IDENTIFIERS-001
+name: Запрет автоматически генерируемых инкрементальных идентификаторов
+requirement: TSCPR_1-CB-41-05
+standard_source: requirements/platform_ready_5.3.1.md
+scope:
+  standard_scope: Все
+  applicability: Автоматическая проверка стандарта явно ищет SERIAL; дополнительные
+    patterns трактуются как расширенная эвристика.
+checks:
+- id: serial_prod
+  purpose: 'Точное автоматическое правило стандарта: SERIAL'
+  sources:
+  - glob: '**/*.sql'
+    exclude_globs:
+    - '**/src/test/**'
+    - '**/test/**'
+    - '**/testdata/**'
+    patterns:
+    - \bSERIAL\b
+    - \bBIGSERIAL\b
+    - \bSMALLSERIAL\b
+- id: auto_increment_extended
+  purpose: Расширенные DB auto-increment признаки; требуют ручной верификации
+  sources:
+  - glob: '**/*.sql'
+    exclude_globs:
+    - '**/src/test/**'
+    - '**/test/**'
+    - '**/testdata/**'
+    patterns:
+    - AUTO_INCREMENT
+    - GENERATED\s+(ALWAYS|BY\s+DEFAULT)\s+AS\s+IDENTITY
+    - \bIDENTITY\s*\(
+- id: liquibase_auto_increment
+  purpose: Liquibase autoIncrement
+  sources:
+  - glob: '**/changelog/**/*.{xml,yaml,yml}'
+    patterns:
+    - autoIncrement\s*=\s*["']true["']
+    - autoIncrement:\s*true
+- id: jpa_identity
+  purpose: JPA generated IDs; расширенная эвристика
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - '@GeneratedValue\s*\(.*GenerationType\.IDENTITY'
+    - '@GeneratedValue\s*\(.*GenerationType\.AUTO'
+    - '@GenericGenerator.*native'
+- id: sequence
+  purpose: Sequence; может быть валидной прикладной схемой и требует ручной проверки
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - GenerationType\.SEQUENCE
+  - glob: '**/changelog/**/*.{xml,yaml,yml}'
+    patterns:
+    - createSequence
+decisions:
+- when:
+    check: serial_prod
+    equals: DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Обнаружен SERIAL/BIGSERIAL/SMALLSERIAL — прямое нарушение автоматической
+    проверки TSCPR_1-CB-41-05.
+- when:
+    any:
+    - check: auto_increment_extended
+      equals: DETECTED
+    - check: liquibase_auto_increment
+      equals: DETECTED
+    - check: jpa_identity
+      equals: DETECTED
+    - check: sequence
+      equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Обнаружен расширенный признак автоматически генерируемого идентификатора;
+    требуется ручная проверка фактической семантики идентификатора.
+- when:
+    all:
+    - check: serial_prod
+      equals: NOT_DETECTED
+    - check: auto_increment_extended
+      equals: NOT_DETECTED
+    - check: liquibase_auto_increment
+      equals: NOT_DETECTED
+    - check: jpa_identity
+      equals: NOT_DETECTED
+    - check: sequence
+      equals: NOT_DETECTED
+  status: PASS
+  confidence: HIGH
+  reason: Запрещённый SERIAL и расширенные признаки автоматической генерации идентификаторов
+    не обнаружены.
+recommendation: Для production objects использовать прикладные идентификаторы; автоматическую
+  генерацию, обнаруженную расширенными heuristics, подтвердить вручную перед исправлением.

@@ -1,0 +1,16 @@
+id: platform-standin
+type: corporate_component
+name: StandIn
+compliance_enabled: false
+note: Не является самостоятельным требованием Platform-Ready 5.3.1 и не участвует
+  в compliance verdict.
+maven:
+  dependencies:
+  - groupId: sbp.integration.orm
+    artifactId: datafabric-replication
+    version: ${hibernate-plugins.version}
+  - groupId: ru.sbrf.journal
+    artifactId: standin-client-api
+capabilities:
+- standin
+- data-isolation

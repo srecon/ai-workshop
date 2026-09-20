@@ -1,0 +1,167 @@
+schema_version: '1.0'
+language: ru
+status_values:
+- PASS
+- ERROR
+- MANUAL_REVIEW
+- N/A
+- NOT_COVERED
+check_states:
+- DETECTED
+- NOT_DETECTED
+- UNKNOWN
+- NOT_APPLICABLE
+evidence_format: <file>:<line> — <snippet or detected fact>
+execution_notes:
+- Dependency presence is evidence, not automatic compliance unless the rule explicitly
+  says so.
+- Do not invent missing configuration, endpoints, brokers, topics, secrets, APIs or
+  corporate class names.
+- Unknown repository scope/configuration must not be converted to a confirmed absence.
+rule_id: PR-PERSISTENCE-001
+name: Изоляция слоя данных
+requirement: TSCPR_1-CB-38-05
+standard_source: requirements/platform_ready_5.3.1.md
+scope:
+  standard_scope: АС/ФП ППРБ при ПСИ, связанных с изменением структуры БД
+  applicability: Repository analysis does not reliably prove PSI/PPRB scope; technical
+    evidence is reported, while unclear scope may require manual confirmation.
+components:
+- platform-persistence
+- platform-dataspace
+checks:
+- id: db_usage
+  purpose: Использование реляционной БД/persistence
+  sources:
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - spring\.datasource
+    - 'jdbc:'
+    - datasource\.url
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - '@Entity'
+    - '@Table'
+    - JpaRepository
+    - EntityManager
+    - JdbcTemplate
+    - DriverManager
+    - java\.sql
+  - glob: '**/*.sql'
+    patterns:
+    - CREATE\s+TABLE
+    - ALTER\s+TABLE
+    - INSERT\s+INTO
+- id: platform_persistence_dependency
+  purpose: Platform V Persistence dependency
+  sources:
+  - type: maven_dependency
+    glob: '**/pom.xml'
+    dependencies:
+    - groupId: sbp.integration.orm
+      artifactId: sbp-hibernate-standin-starter
+    - groupId: sbp.integration.orm
+      artifactId: sbp-hibernate-cap-starter
+- id: dataspace
+  purpose: DataSpace deployment evidence
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - template:\s*dataspace-core-template
+    - name:\s*dataspace
+    - image:.*dataspace
+    - dataspace-core
+- id: direct_jdbc
+  purpose: Прямой доступ к реляционной БД
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - import java\.sql
+    - DriverManager
+    - JdbcTemplate
+    - new .*DataSource
+    - getConnection\(
+- id: direct_db_config
+  purpose: Прямая JDBC datasource configuration без approved isolation component
+  sources:
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - spring\.datasource
+    - 'jdbc:'
+- id: repository_usage
+  purpose: Application persistence repositories
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - extends JpaRepository
+    - extends CrudRepository
+    - '@Repository'
+decisions:
+- when:
+    all:
+    - check: db_usage
+      equals: NOT_DETECTED
+  status: N/A
+  confidence: MEDIUM
+  reason: Признаки использования БД не обнаружены в repository.
+- when:
+    all:
+    - check: db_usage
+      equals: DETECTED
+    - check: direct_jdbc
+      equals: DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Обнаружен прямой JDBC access; это нарушает требование об изоляции слоя данных
+    независимо от наличия других persistence компонентов.
+- when:
+    all:
+    - check: db_usage
+      equals: DETECTED
+    - check: direct_db_config
+      equals: DETECTED
+    - check: platform_persistence_dependency
+      equals: NOT_DETECTED
+    - check: dataspace
+      equals: NOT_DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: JDBC datasource configuration обнаружена без evidence Platform V DataSpace/Persistence.
+- when:
+    all:
+    - check: db_usage
+      equals: DETECTED
+    - any:
+      - check: platform_persistence_dependency
+        equals: DETECTED
+      - check: dataspace
+        equals: DETECTED
+    - check: direct_jdbc
+      equals: NOT_DETECTED
+  status: PASS
+  confidence: HIGH
+  reason: Обнаружен утверждённый слой изоляции данных; прямой JDBC access не обнаружен.
+- when:
+    all:
+    - check: db_usage
+      equals: DETECTED
+    - any:
+      - check: repository_usage
+        equals: DETECTED
+      - check: platform_persistence_dependency
+        equals: DETECTED
+      - check: dataspace
+        equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Persistence используется, но полного evidence фактического использования
+    approved isolation layer или scope стандарта недостаточно.
+- when:
+    all:
+    - check: db_usage
+      equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: LOW
+  reason: Использование БД обнаружено, но approved isolation layer не удалось подтвердить.
+recommendation: Использовать Platform V DataSpace или Platform V Persistence; прямой
+  JDBC access без слоя изоляции устранить.

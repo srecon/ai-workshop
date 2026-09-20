@@ -1,0 +1,185 @@
+schema_version: '1.0'
+language: ru
+status_values:
+- PASS
+- ERROR
+- MANUAL_REVIEW
+- N/A
+- NOT_COVERED
+check_states:
+- DETECTED
+- NOT_DETECTED
+- UNKNOWN
+- NOT_APPLICABLE
+evidence_format: <file>:<line> — <snippet or detected fact>
+execution_notes:
+- Dependency presence is evidence, not automatic compliance unless the rule explicitly
+  says so.
+- Do not invent missing configuration, endpoints, brokers, topics, secrets, APIs or
+  corporate class names.
+- Unknown repository scope/configuration must not be converted to a confirmed absence.
+rule_id: PR-CONTAINERIZATION-001
+name: Контейнеризация бизнес-логики
+requirement: TSCPR_1-CC-60-05
+standard_source: requirements/platform_ready_5.3.1.md
+scope:
+  standard_scope: Все
+  applicability: Бизнес-логика должна запускаться в контейнеризированной среде.
+checks:
+- id: business_app
+  purpose: Признаки runtime business application
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - '@SpringBootApplication'
+    - public\s+static\s+void\s+main
+    - '@RestController|@Controller'
+    - '@Path'
+    - '@ApplicationScoped'
+    - '@Entity|@Table'
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - class .*Service
+    - class .*UseCase
+    - class .*Processor
+    - class .*Calculator
+    - class .*Validator
+- id: library_only
+  purpose: Только parent/library module
+  sources:
+  - glob: '**/pom.xml'
+    patterns:
+    - <packaging>pom</packaging>
+- id: dockerfile_app
+  purpose: Dockerfile/Containerfile для приложения, а не infrastructure image
+  sources:
+  - glob: '**/{Dockerfile,Dockerfile.*,Containerfile,Containerfile.*}'
+    patterns:
+    - java
+    - jar
+    - java -jar
+    - /app
+    - target/
+    - build/
+- id: jib
+  purpose: Jib container image build
+  sources:
+  - glob: '**/pom.xml'
+    patterns:
+    - jib-maven-plugin
+- id: buildpacks
+  purpose: Spring Boot Build Image
+  sources:
+  - glob: '**/build.gradle*'
+    patterns:
+    - bootBuildImage
+- id: k8s_app
+  purpose: Deployment/Pod contains business application container
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - kind:\s*(Deployment|StatefulSet|Pod)
+    - image:.*([.]jar|java|app|service)
+    - command:.*java|args:.*\.jar
+- id: compose_app
+  purpose: Compose service actually builds/runs application
+  sources:
+  - glob: '**/docker-compose*.{yml,yaml}'
+    patterns:
+    - 'build:'
+    - image:.*(app|service|java)
+    - target:.*app
+- id: infra_only_container
+  purpose: Only infrastructure images were found
+  sources:
+  - glob: '**/{Dockerfile*,docker-compose*.{yml,yaml},k8s,helm,openshift}/**/*.{yml,yaml}'
+    patterns:
+    - nginx
+    - postgres
+    - postgresql
+    - mysql
+    - mariadb
+    - kafka
+    - zookeeper
+    - redis
+    - mongo
+    - elasticsearch
+    - rabbitmq
+interpretation:
+- docker-compose с одной БД/Redis/Kafka не доказывает контейнеризацию business logic.
+- Инфраструктурный Dockerfile не считается containerization business logic.
+- Для k8s нужен контейнер бизнес-приложения, а не только sidecar/infra container.
+- Для PASS deployment evidence должен относиться к самому business application workload;
+  при неоднозначном image name прочитать container block и команду запуска.
+decisions:
+- when:
+    all:
+    - check: library_only
+      equals: DETECTED
+    - check: business_app
+      equals: NOT_DETECTED
+  status: N/A
+  confidence: HIGH
+  reason: Модуль выглядит как parent/library, а не runtime component бизнес-логики.
+- when:
+    all:
+    - check: business_app
+      equals: DETECTED
+    - any:
+      - check: dockerfile_app
+        equals: DETECTED
+      - check: jib
+        equals: DETECTED
+      - check: buildpacks
+        equals: DETECTED
+      - check: k8s_app
+        equals: DETECTED
+      - check: compose_app
+        equals: DETECTED
+  status: PASS
+  confidence: HIGH
+  reason: Обнаружены признаки бизнес-приложения и контейнеризации самого приложения.
+- when:
+    all:
+    - check: business_app
+      equals: DETECTED
+    - check: infra_only_container
+      equals: DETECTED
+    - check: dockerfile_app
+      equals: NOT_DETECTED
+    - check: jib
+      equals: NOT_DETECTED
+    - check: buildpacks
+      equals: NOT_DETECTED
+    - check: k8s_app
+      equals: NOT_DETECTED
+    - check: compose_app
+      equals: NOT_DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Найдена контейнеризация инфраструктуры, но контейнеризация бизнес-приложения
+    не обнаружена.
+- when:
+    all:
+    - check: business_app
+      equals: DETECTED
+    - any:
+      - check: dockerfile_app
+        equals: NOT_DETECTED
+      - check: k8s_app
+        equals: UNKNOWN
+  status: MANUAL_REVIEW
+  confidence: LOW
+  reason: Признаки бизнес-приложения есть, но repository evidence о runtime deployment
+    неполна.
+- when:
+    all:
+    - check: business_app
+      equals: DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Бизнес-приложение обнаружено, но evidence контейнеризации самого приложения
+    отсутствует.
+recommendation: Контейнеризовать runtime business application через Docker/OCI image,
+  Jib/Buildpacks или Kubernetes/OpenShift deployment; отдельно не считать инфраструктурные
+  контейнеры доказательством.

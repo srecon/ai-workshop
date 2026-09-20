@@ -1,0 +1,238 @@
+schema_version: '1.0'
+language: ru
+status_values:
+- PASS
+- ERROR
+- MANUAL_REVIEW
+- N/A
+- NOT_COVERED
+check_states:
+- DETECTED
+- NOT_DETECTED
+- UNKNOWN
+- NOT_APPLICABLE
+evidence_format: <file>:<line> — <snippet or detected fact>
+execution_notes:
+- Dependency presence is evidence, not automatic compliance unless the rule explicitly
+  says so.
+- Do not invent missing configuration, endpoints, brokers, topics, secrets, APIs or
+  corporate class names.
+- Unknown repository scope/configuration must not be converted to a confirmed absence.
+rule_id: PR-LOGGING-001
+name: Централизованное журналирование
+requirement: TSCPR_1-CC-02-05
+standard_source: requirements/platform_ready_5.3.1.md
+scope:
+  standard_scope: Все
+  applicability: Все АС.
+components:
+- platform-logging
+approved_schemes:
+- 'A: Fluent Bit sidecar -> Kafka LOGA'
+- 'B: Прямая интеграция с АС «Тенгри» (manual review)'
+- 'C: Agent LOGA (ALOG) sidecar'
+checks:
+- id: application_logging
+  purpose: Приложение генерирует logs
+  sources:
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - import org\.slf4j\.(Logger|LoggerFactory|MDC)
+    - LoggerFactory\.getLogger
+    - import org\.apache\.logging\.log4j
+    - log\.(info|debug|warn|error|trace)\(
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - logging\.file
+    - logging\.level
+  - glob: '**/{logback*.xml,log4j2*.xml}'
+    patterns:
+    - FileAppender
+    - RollingFileAppender
+    - ConsoleAppender
+    - <appender
+- id: logging_sidecar
+  purpose: Fluent Bit sidecar установлен рядом с приложением
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - name:\s*fluent-bit-sidecar
+    - name:\s*fluent-bit
+  correlation_group: fluentbit_pipeline
+- id: fluentbit_config
+  purpose: ConfigMap содержит Fluent Bit pipeline
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - fluent-bit\.conf
+    - \[INPUT\]
+    - \[OUTPUT\]
+  correlation_group: fluentbit_pipeline
+- id: fluentbit_input_tail
+  purpose: Fluent Bit читает application log files
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - Name\s+tail
+    - Path\s+[^\n]*app
+    - Path\s+[^\n]*log
+  correlation_group: fluentbit_pipeline
+- id: fluentbit_output_kafka
+  purpose: Fluent Bit отправляет через Kafka
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - Name\s+kafka
+  correlation_group: fluentbit_pipeline
+- id: loga_destination
+  purpose: Kafka output указывает на LOGA
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - :19093
+    - (?i)\bloga\b
+  correlation_group: fluentbit_pipeline
+- id: shared_log_volume
+  purpose: Application и Fluent Bit имеют общий log volume
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - app-logs
+    - volumeMounts
+    - volumes
+  correlation_group: fluentbit_pipeline
+- id: loga_certs
+  purpose: TLS credentials для Kafka LOGA
+  sources:
+  - glob: '**/{k8s,helm,openshift}/**/*.{yaml,yml}'
+    patterns:
+    - kafka-loga-certs
+  correlation_group: fluentbit_pipeline
+- id: direct_tengri
+  purpose: Прямая интеграция с АС «Тенгри»
+  sources:
+  - glob: '**/pom.xml'
+    patterns:
+    - tengri.*logging
+    - journal.*client
+  - glob: '**/src/main/java/**/*.java'
+    patterns:
+    - Tengri.*Log
+    - Tengri.*Logging
+    - Journal.*Client
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - tengri.*logging
+    - journal.*endpoint
+- id: external_backend
+  purpose: Неразрешённый logging backend
+  sources:
+  - glob: '**/application*.{yml,yaml,properties}'
+    patterns:
+    - (?i)elasticsearch
+    - (?i)\bloki\b
+    - (?i)splunk
+    - (?i)filebeat
+  - glob: '**/{logback*.xml,log4j2*.xml,*fluent-bit*.conf,*fluent-bit*.yaml,*fluent-bit*.yml,*logging*.yaml,*logging*.yml}'
+    patterns:
+    - (?i)elasticsearch
+    - (?i)\bloki\b
+    - (?i)splunk
+    - (?i)filebeat
+decisions:
+- when:
+    check: external_backend
+    equals: DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Обнаружен сторонний backend логирования, не подтверждённый как Тенгри/LOGA.
+- when:
+    all:
+    - check: logging_sidecar
+      equals: DETECTED
+    - check: fluentbit_config
+      equals: DETECTED
+    - check: fluentbit_input_tail
+      equals: DETECTED
+    - check: fluentbit_output_kafka
+      equals: DETECTED
+    - check: loga_destination
+      equals: DETECTED
+    - check: application_logging
+      equals: DETECTED
+  status: PASS
+  confidence: HIGH
+  reason: Обнаружена цепочка application logging -> Fluent Bit -> Kafka LOGA.
+- when:
+    all:
+    - check: direct_tengri
+      equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Обнаружена потенциальная прямая интеграция с АС «Тенгри»; требуется подтверждение
+    фактической схемы.
+- when:
+    all:
+    - check: logging_sidecar
+      equals: DETECTED
+    - check: fluentbit_config
+      equals: UNKNOWN
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Fluent Bit sidecar обнаружен, но его конфигурация недоступна для анализа.
+- when:
+    all:
+    - check: logging_sidecar
+      equals: DETECTED
+    - check: application_logging
+      equals: NOT_DETECTED
+  status: MANUAL_REVIEW
+  confidence: MEDIUM
+  reason: Sidecar обнаружен, но evidence генерации application logs не найден.
+- when:
+    all:
+    - check: application_logging
+      equals: DETECTED
+    - check: logging_sidecar
+      equals: NOT_DETECTED
+    - check: direct_tengri
+      equals: NOT_DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Приложение логирует, но корпоративный механизм доставки в Тенгри/LOGA не
+    обнаружен.
+- when:
+    all:
+    - check: application_logging
+      equals: NOT_DETECTED
+    - check: logging_sidecar
+      equals: NOT_DETECTED
+    - check: direct_tengri
+      equals: NOT_DETECTED
+  status: ERROR
+  confidence: HIGH
+  reason: Не обнаружены ни application logging, ни корпоративный механизм централизованного
+    журналирования.
+- when:
+    any:
+    - check: logging_sidecar
+      equals: DETECTED
+    - check: fluentbit_config
+      equals: DETECTED
+    - check: fluentbit_output_kafka
+      equals: DETECTED
+  status: MANUAL_REVIEW
+  confidence: LOW
+  reason: Есть частичные признаки централизованного logging path, но недостаточно
+    evidence для PASS.
+recommendation: Настроить один из утверждённых путей журналирования. Для Fluent Bit
+  подтверждать весь pipeline до LOGA, а не только наличие sidecar.
+interpretation:
+- Для PASS evidence checks logging_sidecar/fluentbit_config/fluentbit_input_tail/fluentbit_output_kafka/loga_destination
+  должны относиться к одному workload/logging pipeline, а не к случайным файлам разных
+  сервисов.
+- 'Наличие LOGA/19093 в произвольном месте YAML не является достаточным evidence:
+  прочитать контекст [OUTPUT] и подтвердить destination того же Fluent Bit pipeline.'
+- Наличие Elasticsearch/Loki/Splunk/Filebeat в бизнес-коде или unrelated infrastructure
+  не является автоматически нарушением; ERROR только если оно подтверждено как logging
+  destination.

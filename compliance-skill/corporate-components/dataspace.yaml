@@ -1,0 +1,17 @@
+id: platform-dataspace
+type: platform_component
+name: Platform V DataSpace
+implements_requirements:
+- TSCPR_1-CB-38-05
+deployment_signals:
+- type: k8s_configmap
+  label_key: template
+  label_value: dataspace-core-template
+- type: k8s_container
+  patterns:
+  - 'name: dataspace'
+  - image:.*dataspace
+  - dataspace-core
+capabilities:
+- data-isolation
+- dataspace-orm
