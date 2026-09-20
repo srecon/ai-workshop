@@ -1,4 +1,4 @@
-# Platform-Ready Compliance — Target Architecture
+# Platform-Ready Compliance
 
 Skill для автоматизированной проверки Java-проектов на соответствие корпоративному стандарту Platform-Ready 5.3.1.
 
