@@ -1,0 +1,41 @@
+curl http://localhost:11434/v1/systemone -d '{
+"model": "nimble",
+"state": "Our checkout has returned 500 errors since 9am.",
+"questions": {
+"label": {
+"type": "choice",
+"instructions": "Which label fits this ticket?",
+"criteria": {"billing": null, "bug": null, "account": null}
+
+}
+}
+} '
+
+
+
+curl http://localhost:11434/v1/systemone -d '{
+"model": "nimble",
+"state": "Необходимо проектировать систему в режиме Active-Active-Active",
+"questions": {
+"label": {
+"type": "choice",
+"instructions": "Какой из этих меток соотвествует к вопросу?",
+"criteria": {"Архитектурный вопрос": null, "Вопрос к разработку": null, "Аналитика": null}
+
+}
+}
+} '
+
+
+curl http://localhost:11434/v1/systemone -d '{
+"model": "nimble",
+"state": "Созда ть в скрип тах разве ртыва ния прило жения сущно сть Config Map с назва нием TestFa iled",
+"questions": {
+"label": {
+"type": "choice",
+"instructions": "Какой из этих меток соотвествует к вопросу?",
+"criteria": {"Архитектурный вопрос": null, "Вопрос к разработку": null, "Аналитика": null}
+
+}
+}
+} '
