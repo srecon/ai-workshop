@@ -12,15 +12,21 @@ class LLMClient:
     def __init__(self):
         self.gemini_model = None
         self.openai_client = None
-        
+        self.omlx_client = None
+
         # Get Ollama configuration from .env
         ollama_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
         self.ollama_url = ollama_url.rstrip('/')
         self.ollama_model = os.getenv('OLLAMA_MODEL', 'qwen2.5:7b')
-        
+
         print(f"Ollama configured with URL: {self.ollama_url}")
         print(f"Ollama model: {self.ollama_model}")
-        
+
+        # Get oMLX configuration from .env
+        omlx_url = os.getenv('OMLX_URL', 'http://127.0.0.1:8000/v1')
+        self.omlx_url = omlx_url.rstrip('/v1').rstrip('/')
+        print(f"oMLX configured with URL: {self.omlx_url}")
+
         # Initialize Gemini
         gemini_key = os.getenv('GEMINI_API_KEY')
         if gemini_key:
@@ -30,7 +36,7 @@ class LLMClient:
                 print("Gemini initialized successfully")
             except Exception as e:
                 print(f"Error initializing Gemini: {e}")
-        
+
         # Initialize OpenAI
         openai_key = os.getenv('OPENAI_API_KEY')
         if openai_key:
@@ -39,15 +45,28 @@ class LLMClient:
                 print("OpenAI initialized successfully")
             except Exception as e:
                 print(f"Error initializing OpenAI: {e}")
+
+        # Initialize oMLX (OpenAI-compatible)
+        omlx_key = os.getenv('OMLX_API_KEY', 'sk-omlx')
+        try:
+            self.omlx_client = OpenAI(
+                api_key=omlx_key,
+                base_url=self.omlx_url,
+            )
+            print("oMLX initialized successfully")
+        except Exception as e:
+            print(f"Error initializing oMLX: {e}")
     
-    def analyze_portfolio(self, metrics: Dict, provider: str = 'gemini') -> str:
+    def analyze_portfolio(self, metrics: Dict, provider: str = 'omlx') -> str:
         """Analyze portfolio using specified LLM"""
         # Build anonymized prompt
         prompt = self._build_analysis_prompt(metrics)
-        
+
         print(f"Analyzing with provider: {provider}")
-        
-        if provider == 'gemini' and self.gemini_model:
+
+        if provider == 'omlx' and self.omlx_client:
+            return self._call_omlx(prompt)
+        elif provider == 'gemini' and self.gemini_model:
             return self._call_gemini(prompt)
         elif provider == 'openai' and self.openai_client:
             return self._call_openai(prompt)
@@ -131,6 +150,21 @@ class LLMClient:
         except Exception as e:
             return f"Ошибка при вызове OpenAI: {str(e)}"
     
+    def _call_omlx(self, prompt: str) -> str:
+        """Call oMLX (OpenAI-compatible API)"""
+        try:
+            response = self.omlx_client.chat.completions.create(
+                model=os.getenv('OMLX_MODEL', 'Qwen3.6-35B-A3B-MLX-4bit'),
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                top_p=0.8,
+                max_tokens=8192,
+                timeout=600,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"Ошибка при вызове oMLX: {str(e)}"
+
     def _call_ollama(self, prompt: str) -> str:
         """Call local Ollama"""
         try:
@@ -190,7 +224,7 @@ class LLMClient:
         except Exception as e:
             return f"Неожиданная ошибка при вызове Ollama: {str(e)}"
     
-    def ask_followup(self, question: str, context: Dict, provider: str = 'gemini') -> str:
+    def ask_followup(self, question: str, context: Dict, provider: str = 'omlx') -> str:
         """Ask follow-up questions about portfolio"""
         prompt = f"""На основе этого контекста портфеля:
 {json.dumps(context, indent=2, ensure_ascii=False)}
@@ -198,8 +232,10 @@ class LLMClient:
 Вопрос пользователя: {question}
 
 Дай подробный, практичный ответ, фокусируясь на личных финансах и инвестиционной стратегии в контексте российского рубля."""
-        
-        if provider == 'gemini' and self.gemini_model:
+
+        if provider == 'omlx' and self.omlx_client:
+            return self._call_omlx(prompt)
+        elif provider == 'gemini' and self.gemini_model:
             return self._call_gemini(prompt)
         elif provider == 'openai' and self.openai_client:
             return self._call_openai(prompt)
