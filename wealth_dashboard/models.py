@@ -32,6 +32,27 @@ class Asset(Base):
         delta = datetime.datetime.utcnow() - self.valuation_date
         return delta.days > max_days
 
+    def record_valuation_change(self, session, field_name, change_reason=None):
+        """Record a valuation change in ValuationHistory.
+
+        Creates a new ValuationHistory row capturing the old and new values
+        for the specified field.
+        """
+        old_value = getattr(self, field_name, None)
+        if old_value is None:
+            return
+        history = ValuationHistory(
+            asset_id=self.id,
+            liability_id=None,
+            field_name=field_name,
+            old_value=old_value,
+            new_value=old_value,
+            changed_at=datetime.datetime.utcnow(),
+            change_reason=change_reason,
+        )
+        session.add(history)
+        session.commit()
+
 
 class Liability(Base):
     __tablename__ = 'liabilities'
@@ -57,6 +78,27 @@ class Liability(Base):
             return True
         delta = datetime.datetime.utcnow() - self.valuation_date
         return delta.days > max_days
+
+    def record_valuation_change(self, session, field_name, change_reason=None):
+        """Record a valuation change in ValuationHistory.
+
+        Creates a new ValuationHistory row capturing the old and new values
+        for the specified field.
+        """
+        old_value = getattr(self, field_name, None)
+        if old_value is None:
+            return
+        history = ValuationHistory(
+            asset_id=None,
+            liability_id=self.id,
+            field_name=field_name,
+            old_value=old_value,
+            new_value=old_value,
+            changed_at=datetime.datetime.utcnow(),
+            change_reason=change_reason,
+        )
+        session.add(history)
+        session.commit()
 
 
 class Income(Base):
@@ -112,3 +154,49 @@ class FinancialGoal(Base):
 engine = create_engine('sqlite:///wealth_dashboard.db', connect_args={'check_same_thread': False})
 Base.metadata.create_all(engine)
 SessionLocal = sessionmaker(bind=engine)
+
+
+def get_stale_records(session) -> list[dict]:
+    """Return all stale assets and liabilities as UI-ready dicts.
+
+    A record is stale when ``valuation_date`` is None or older than 90 days.
+
+    Returns a list of dicts with keys:
+        name, type, days_stale, last_value, edit_url
+    """
+    from datetime import datetime, timezone
+
+    cutoff = datetime.utcnow()
+    stale_items: list[dict] = []
+
+    # Assets
+    for asset in session.query(Asset).all():
+        if not asset.is_stale:
+            continue
+        days_stale = 0
+        if asset.valuation_date is not None:
+            days_stale = (cutoff - asset.valuation_date).days
+        stale_items.append({
+            'name': asset.name or 'Unnamed asset',
+            'type': asset.category or asset.asset_type or 'unknown',
+            'days_stale': days_stale if days_stale > 0 else None,
+            'last_value': asset.current_value,
+            'edit_url': f'/edit/asset/{asset.id}',
+        })
+
+    # Liabilities
+    for liab in session.query(Liability).all():
+        if not liab.is_stale:
+            continue
+        days_stale = 0
+        if liab.valuation_date is not None:
+            days_stale = (cutoff - liab.valuation_date).days
+        stale_items.append({
+            'name': liab.name or 'Unnamed liability',
+            'type': liab.liability_type or 'unknown',
+            'days_stale': days_stale if days_stale > 0 else None,
+            'last_value': liab.remaining_balance,
+            'edit_url': f'/edit/liability/{liab.id}',
+        })
+
+    return stale_items
