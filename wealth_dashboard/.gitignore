@@ -1,0 +1,17 @@
+# ==========================================
+# Testing / Coverage Reports
+# ==========================================
+.cache
+.pytest_cache/
+cover/
+__pycache__/
+.env
+.qwen
+openspec/
+*.db
+*.sqlite3
+Project_structure.MD
+wealth-management-dashboard-requirements.md
+*.xlsx
+tests/
+.DS_Store

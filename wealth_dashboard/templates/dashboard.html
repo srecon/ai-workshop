@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Wealth Overview{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Financial Dashboard</h2>
+        <p class="text-muted">Your complete wealth overview</p>
+    </div>
+</div>
+
+<!-- Key Metrics Row -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Net Worth</h5>
+                <h2>₽{{ "%.0f"|format(metrics.net_worth) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Monthly Cashflow</h5>
+                <h2>₽{{ "%.0f"|format(metrics.monthly_cashflow) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Total Liabilities</h5>
+                <h2>₽{{ "%.0f"|format(metrics.total_liabilities) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <h5 class="card-title">Risk Level</h5>
+                <h2>{{ metrics.risk.level }}</h2>
+                <small>Score: {{ metrics.risk.score }}/10</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div id="wealthPyramid"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div id="allocationPie"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div id="netWorthGauge"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div id="riskGauge"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div id="cashflowChart"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Analysis Section -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>🤖 AI Financial Advisor</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Select AI Provider:</label>
+                    <select id="aiProvider" class="form-select">
+                        <option value="gemini">Gemini 1.5 Pro (Remote)</option>
+                        <option value="openai">GPT-4 (Remote - requires API key)</option>
+                        <option value="ollama">Ollama (Local - requires running)</option>
+                    </select>
+                </div>
+
+                <button id="analyzeBtn" class="btn btn-primary btn-lg w-100 mb-3">
+                    Analyze My Portfolio
+                </button>
+
+                <div id="analysisResult" class="mt-3" style="display:none;">
+                    <div class="alert alert-info">
+                        <h5>AI Analysis Results:</h5>
+                        <div id="analysisText" style="white-space: pre-wrap;"></div>
+                    </div>
+                </div>
+
+                <div id="chatSection" style="display:none;" class="mt-4">
+                    <hr>
+                    <h5>Ask a follow-up question:</h5>
+                    <div class="input-group mb-3">
+                        <input type="text" id="questionInput" class="form-control" placeholder="e.g., Should I sell some crypto to buy real estate?">
+                        <button id="askBtn" class="btn btn-secondary">Ask</button>
+                    </div>
+                    <div id="answerResult"></div>
+                </div>
+
+                <div id="loadingAnalysis" class="text-center d-none">
+                    <div class="spinner-border text-primary"></div>
+                    <p>Analyzing your portfolio with AI...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assets Table -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>Top Assets</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Asset Name</th>
+                                <th>Category</th>
+                                <th>Type</th>
+                                <th>Value (RUB)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for asset in assets[:10] %}
+                            <tr>
+                                <td>{{ asset.name }}</td>
+                                <td>{{ asset.category }}</td>
+                                <td>{{ asset.asset_type }}</td>
+                                <td>₽{{ "%.0f"|format(asset.current_value) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Render charts
+const wealthPyramid = {{ wealth_pyramid|safe }};
+const allocationPie = {{ allocation_pie|safe }};
+const netWorthGauge = {{ net_worth_gauge|safe }};
+const cashflowChart = {{ cashflow_chart|safe }};
+const riskGauge = {{ risk_gauge|safe }};
+
+Plotly.newPlot('wealthPyramid', wealthPyramid.data, wealthPyramid.layout);
+Plotly.newPlot('allocationPie', allocationPie.data, allocationPie.layout);
+Plotly.newPlot('netWorthGauge', netWorthGauge.data, netWorthGauge.layout);
+Plotly.newPlot('cashflowChart', cashflowChart.data, cashflowChart.layout);
+Plotly.newPlot('riskGauge', riskGauge.data, riskGauge.layout);
+
+// AI Analysis
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+    const provider = document.getElementById('aiProvider').value;
+    const loading = document.getElementById('loadingAnalysis');
+    const resultDiv = document.getElementById('analysisResult');
+    const chatSection = document.getElementById('chatSection');
+    const analysisText = document.getElementById('analysisText');
+
+    loading.classList.remove('d-none');
+    resultDiv.style.display = 'none';
+
+    try {
+        const response = await fetch(`/api/analyze?session_id={{ session_id }}&provider=${provider}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            analysisText.textContent = data.analysis;
+            resultDiv.style.display = 'block';
+            chatSection.style.display = 'block';
+        } else {
+            analysisText.textContent = 'Error: ' + (data.detail || 'Analysis failed');
+            resultDiv.style.display = 'block';
+        }
+    } catch (error) {
+        analysisText.textContent = 'Error: ' + error.message;
+        resultDiv.style.display = 'block';
+    } finally {
+        loading.classList.add('d-none');
+    }
+});
+
+// Follow-up question
+document.getElementById('askBtn').addEventListener('click', async () => {
+    const question = document.getElementById('questionInput').value;
+    const provider = document.getElementById('aiProvider').value;
+    const answerDiv = document.getElementById('answerResult');
+
+    if (!question) return;
+
+    answerDiv.innerHTML = '<div class="spinner-border text-secondary"></div> Thinking...';
+
+    try {
+        const response = await fetch(`/api/ask?question=${encodeURIComponent(question)}&session_id={{ session_id }}&provider=${provider}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            answerDiv.innerHTML = `<div class="alert alert-success mt-2">${data.answer}</div>`;
+        } else {
+            answerDiv.innerHTML = `<div class="alert alert-danger mt-2">Error: ${data.detail}</div>`;
+        }
+    } catch (error) {
+        answerDiv.innerHTML = `<div class="alert alert-danger mt-2">Error: ${error.message}</div>`;
+    }
+});
+</script>
+{% endblock %}

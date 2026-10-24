@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Upload Your Financial Data</h3>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Excel File (.xlsx or .xls)</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls" required>
+                        <div class="form-text">
+                            Your file should contain sheets for: Real Estate, Crypto, Stocks, Deposits, Loans, Income, Expenses
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload & Analyze</button>
+                </form>
+
+                <div id="loading" class="text-center mt-3 d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Parsing your financial data...</p>
+                </div>
+
+                <div id="error" class="alert alert-danger mt-3 d-none"></div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>How It Works</h4>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li>Upload your Excel file with asset sheets</li>
+                    <li>System auto-detects asset types and builds Wealth Pyramid</li>
+                    <li>View interactive dashboard with net worth, risk analysis</li>
+                    <li>Ask AI for personalized financial advice (Gemini 1.5 Pro or local Ollama)</li>
+                </ol>
+                <p class="text-muted">🔒 Privacy First: All data stays on your computer. No cloud storage.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('file');
+    const file = fileInput.files[0];
+
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    document.getElementById('loading').classList.remove('d-none');
+    document.getElementById('error').classList.add('d-none');
+
+    try {
+        const response = await fetch('/upload/excel', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            window.location.href = data.redirect;
+        } else {
+            throw new Error(data.detail || 'Upload failed');
+        }
+    } catch (error) {
+        document.getElementById('error').textContent = error.message;
+        document.getElementById('error').classList.remove('d-none');
+    } finally {
+        document.getElementById('loading').classList.add('d-none');
+    }
+});
+</script>
+{% endblock %}

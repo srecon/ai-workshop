@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h3>⚙️ Settings & Configuration</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>Privacy Notice:</strong> All API keys are stored locally on your computer. Never share them.
+                </div>
+
+                <form id="settingsForm">
+                    <h5>Gemini API (Recommended)</h5>
+                    <div class="mb-3">
+                        <label for="geminiKey" class="form-label">Gemini API Key</label>
+                        <input type="password" class="form-control" id="geminiKey" placeholder="Enter your Gemini API key">
+                        <div class="form-text">
+                            Get from <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h5>OpenAI (Optional)</h5>
+                    <div class="mb-3">
+                        <label for="openaiKey" class="form-label">OpenAI API Key</label>
+                        <input type="password" class="form-control" id="openaiKey" placeholder="Enter your OpenAI API key">
+                    </div>
+
+                    <hr>
+
+                    <h5>Ollama (Local)</h5>
+                    <div class="mb-3">
+                        <label for="ollamaUrl" class="form-label">Ollama URL</label>
+                        <input type="text" class="form-control" id="ollamaUrl" placeholder="http://localhost:11434">
+                        <div class="form-text">
+                            Install Ollama from <a href="https://ollama.ai" target="_blank">ollama.ai</a><br>
+                            Then run: <code>ollama pull qwen2.5:7b</code> and <code>ollama serve</code>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </form>
+
+                <div id="saveMsg" class="mt-3"></div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>📝 Quick Start Guide</h4>
+            </div>
+            <div class="card-body">
+                <h6>1. Install dependencies:</h6>
+                <code>pip install -r requirements.txt</code>
+
+                <h6 class="mt-3">2. Set up environment variables:</h6>
+                <code>cp .env.example .env</code><br>
+                <code>nano .env</code>  # Add your Gemini API key
+
+                <h6 class="mt-3">3. Run the application:</h6>
+                <code>python main.py</code>
+
+                <h6 class="mt-3">4. Open browser:</h6>
+                <code>http://localhost:8000</code>
+
+                <h6 class="mt-3">5. (Optional) Run local Ollama:</h6>
+                <code>ollama pull qwen2.5:7b</code><br>
+                <code>ollama serve</code>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load saved settings from localStorage
+document.getElementById('geminiKey').value = localStorage.getItem('gemini_key') || '';
+document.getElementById('openaiKey').value = localStorage.getItem('openai_key') || '';
+document.getElementById('ollamaUrl').value = localStorage.getItem('ollama_url') || 'http://localhost:11434';
+
+document.getElementById('settingsForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    localStorage.setItem('gemini_key', document.getElementById('geminiKey').value);
+    localStorage.setItem('openai_key', document.getElementById('openaiKey').value);
+    localStorage.setItem('ollama_url', document.getElementById('ollamaUrl').value);
+
+    document.getElementById('saveMsg').innerHTML =
+        '<div class="alert alert-success">Settings saved! Restart the app for changes to take effect.</div>';
+
+    setTimeout(() => {
+        document.getElementById('saveMsg').innerHTML = '';
+    }, 3000);
+});
+</script>
+{% endblock %}
