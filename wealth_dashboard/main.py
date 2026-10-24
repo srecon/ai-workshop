@@ -8,7 +8,7 @@ import uuid
 from dotenv import load_dotenv
 from datetime import datetime
 
-from models import SessionLocal, Asset, Liability, Income, Expense, UserOverride
+from models import SessionLocal, Asset, Liability, Income, Expense, UserOverride, get_stale_records
 from parser import WealthParser
 from metrics import MetricsCalculator
 from charts import *
@@ -169,6 +169,10 @@ async def dashboard(request: Request, session_id: str):
         cashflow_chart = create_cashflow_chart(metrics['total_income'], metrics['total_expenses'])
         risk_gauge = create_risk_gauge(metrics['risk']['score'])
         
+        # Get stale records for the stale badge
+        stale_records_list = get_stale_records(db)
+        stale_count = len(stale_records_list)
+
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "session_id": session_id,
@@ -180,7 +184,9 @@ async def dashboard(request: Request, session_id: str):
             "risk_gauge": risk_gauge,
             "assets": assets_dict[:10],
             "liabilities": liabilities_dict,
-            "income_streams": income_dict
+            "income_streams": income_dict,
+            "stale_count": stale_count,
+            "stale_records": stale_records_list
         })
         
     except Exception as e:
@@ -190,34 +196,34 @@ async def dashboard(request: Request, session_id: str):
         db.close()
 
 @app.post("/api/analyze")
-async def analyze_with_llm(session_id: str, provider: str = "gemini"):
+async def analyze_with_llm(session_id: str, provider: str = "omlx"):
     """Analyze portfolio with selected LLM"""
     db = SessionLocal()
-    
+
     try:
         # Fetch current metrics
         assets = db.query(Asset).all()
         liabilities = db.query(Liability).all()
         income_streams = db.query(Income).all()
         expenses = db.query(Expense).all()
-        
+
         assets_dict = [{'current_value': a.current_value, 'asset_type': a.asset_type} for a in assets]
         liabilities_dict = [{'remaining_balance': l.remaining_balance} for l in liabilities]
         income_dict = [{'monthly_amount': i.monthly_amount} for i in income_streams]
         expenses_dict = [{'monthly_amount': e.monthly_amount} for e in expenses]
-        
+
         calculator = MetricsCalculator(assets_dict, liabilities_dict, income_dict, expenses_dict)
         metrics = calculator.get_all_metrics()
-        
+
         # Get LLM analysis
         analysis = llm_client.analyze_portfolio(metrics, provider)
-        
+
         return JSONResponse({
             'analysis': analysis,
             'provider': provider,
             'timestamp': datetime.now().isoformat()
         })
-        
+
     except Exception as e:
         print(f"Analysis error: {str(e)}")
         raise HTTPException(500, f"Analysis error: {str(e)}")
@@ -225,25 +231,25 @@ async def analyze_with_llm(session_id: str, provider: str = "gemini"):
         db.close()
 
 @app.post("/api/ask")
-async def ask_followup(question: str, session_id: str, provider: str = "gemini"):
+async def ask_followup(question: str, session_id: str, provider: str = "omlx"):
     """Ask follow-up question"""
     db = SessionLocal()
-    
+
     try:
         # Get current metrics as context
         assets = db.query(Asset).all()
         liabilities = db.query(Liability).all()
-        
+
         context = {
             'total_assets': sum(a.current_value for a in assets),
             'total_liabilities': sum(l.remaining_balance for l in liabilities),
             'net_worth': sum(a.current_value for a in assets) - sum(l.remaining_balance for l in liabilities)
         }
-        
+
         answer = llm_client.ask_followup(question, context, provider)
-        
+
         return JSONResponse({'answer': answer})
-        
+
     except Exception as e:
         print(f"Question error: {str(e)}")
         raise HTTPException(500, f"Question error: {str(e)}")
@@ -312,6 +318,6 @@ if __name__ == "__main__":
     import uvicorn
     print("=" * 50)
     print("Intelligent Wealth Dashboard Starting...")
-    print("Open http://127.0.0.1:8000 in your browser")
+    print("Open http://127.0.0.1:9000 in your browser")
     print("=" * 50)
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=9000)
