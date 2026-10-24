@@ -1,9 +1,10 @@
 import os
 import json
+import time
 import requests
 from typing import Dict, Optional
 import google.generativeai as genai
-from openai import OpenAI
+from openai import OpenAI, APIConnectionError, APIStatusError, APITimeoutError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,7 +25,7 @@ class LLMClient:
 
         # Get oMLX configuration from .env
         omlx_url = os.getenv('OMLX_URL', 'http://127.0.0.1:8000/v1')
-        self.omlx_url = omlx_url.rstrip('/v1').rstrip('/')
+        self.omlx_url = omlx_url
         print(f"oMLX configured with URL: {self.omlx_url}")
 
         # Initialize Gemini
@@ -48,10 +49,13 @@ class LLMClient:
 
         # Initialize oMLX (OpenAI-compatible)
         omlx_key = os.getenv('OMLX_API_KEY', 'sk-omlx')
+        omlx_timeout = int(os.getenv('OMLX_TIMEOUT', '600'))
         try:
             self.omlx_client = OpenAI(
                 api_key=omlx_key,
                 base_url=self.omlx_url,
+                timeout=omlx_timeout,
+                max_retries=0,
             )
             print("oMLX initialized successfully")
         except Exception as e:
@@ -151,19 +155,51 @@ class LLMClient:
             return f"Ошибка при вызове OpenAI: {str(e)}"
     
     def _call_omlx(self, prompt: str) -> str:
-        """Call oMLX (OpenAI-compatible API)"""
+        """Call oMLX (OpenAI-compatible API).
+
+        Uses the same pattern as test_omlx.py: explicit exception handling
+        for connection errors, timeouts, and API errors, plus a system
+        message to guide the model's behaviour.
+        """
+        if not self.omlx_client:
+            return "oMLX client not initialized. Check OMLX_URL and OMLX_API_KEY in .env"
+
+        model = os.getenv('OMLX_MODEL', 'Qwen3.6-35B-A3B-MLX-4bit')
+        max_tokens = int(os.getenv('OMLX_MAX_TOKENS', '8192'))
+
         try:
             response = self.omlx_client.chat.completions.create(
-                model=os.getenv('OMLX_MODEL', 'Qwen3.6-35B-A3B-MLX-4bit'),
-                messages=[{"role": "user", "content": prompt}],
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a professional financial advisor specializing in Russian fixed-income portfolios and personal wealth management."},
+                    {"role": "user", "content": prompt},
+                ],
                 temperature=0.3,
                 top_p=0.8,
-                max_tokens=8192,
-                timeout=600,
+                max_tokens=max_tokens,
             )
-            return response.choices[0].message.content
-        except Exception as e:
-            return f"Ошибка при вызове oMLX: {str(e)}"
+
+            content = response.choices[0].message.content
+            if content:
+                return content
+
+            return "oMLX returned an empty response."
+
+        except APIConnectionError as exc:
+            return (
+                f"Не удалось подключиться к oMLX серверу по адресу {self.omlx_url}.\n"
+                f"Проверьте что oMLX запущен и слушает порт 8000.\n"
+                f"Детали: {exc}"
+            )
+
+        except APITimeoutError:
+            return f"Таймаут при вызове oMLX (превышено 600 секунд). Модель может быть занята инференсом."
+
+        except APIStatusError as exc:
+            return f"Ошибка oMLX API: HTTP {exc.status_code}\n{exc.message}"
+
+        except Exception as exc:
+            return f"Неожиданная ошибка при вызове oMLX: {type(exc).__name__}: {exc}"
 
     def _call_ollama(self, prompt: str) -> str:
         """Call local Ollama"""
