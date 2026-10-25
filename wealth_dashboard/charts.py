@@ -27,7 +27,8 @@ def create_wealth_pyramid(allocation: dict) -> str:
         float(allocation.get('growth', 0)),
         float(allocation.get('high_risk', 0))
     ]
-    colors = ['#2ecc71', '#3498db', '#e74c3c']
+    # Muted/intelliInvoice palette — soft emerald, amber, rose (no pure RGB primaries)
+    colors = ['#4f46e5', '#34d399', '#fb7185']
     
     fig = go.Figure(data=[
         go.Bar(
@@ -97,13 +98,13 @@ def create_net_worth_gauge(net_worth: float) -> str:
         delta={'reference': 0},
         gauge={
             'axis': {'range': [None, max_value]},
-            'bar': {'color': "darkblue"},
+            'bar': {'color': "#4f46e5"},
             'steps': [
-                {'range': [0, net_worth/2], 'color': "lightgray"},
-                {'range': [net_worth/2, net_worth], 'color': "gray"}
+                {'range': [0, net_worth/2], 'color': "#f1f5f9"},
+                {'range': [net_worth/2, net_worth], 'color': "#cbd5e1"}
             ],
             'threshold': {
-                'line': {'color': "red", 'width': 4},
+                'line': {'color': "#fb7185", 'width': 4},
                 'thickness': 0.75,
                 'value': net_worth
             }
@@ -121,8 +122,8 @@ def create_cashflow_chart(monthly_income: float, monthly_expenses: float) -> str
     monthly_expenses = float(monthly_expenses)
     
     fig = go.Figure(data=[
-        go.Bar(name='Income', x=['Monthly'], y=[monthly_income], marker_color='#2ecc71'),
-        go.Bar(name='Expenses', x=['Monthly'], y=[monthly_expenses], marker_color='#e74c3c')
+        go.Bar(name='Income', x=['Monthly'], y=[monthly_income], marker_color='#34d399'),
+        go.Bar(name='Expenses', x=['Monthly'], y=[monthly_expenses], marker_color='#fb7185')
     ])
     
     fig.update_layout(
@@ -147,14 +148,14 @@ def create_risk_gauge(risk_score: int) -> str:
         title={'text': "Risk Score (1-10)"},
         gauge={
             'axis': {'range': [None, 10]},
-            'bar': {'color': "darkred"},
+            'bar': {'color': "#4f46e5"},
             'steps': [
-                {'range': [0, 3], 'color': "lightgreen"},
-                {'range': [3, 6], 'color': "yellow"},
-                {'range': [6, 10], 'color': "salmon"}
+                {'range': [0, 3], 'color': "#34d399"},
+                {'range': [3, 6], 'color': "#fbbf24"},
+                {'range': [6, 10], 'color': "#fb7185"}
             ],
             'threshold': {
-                'line': {'color': "black", 'width': 4},
+                'line': {'color': "#1e293b", 'width': 4},
                 'thickness': 0.75,
                 'value': risk_score
             }

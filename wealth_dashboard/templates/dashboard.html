@@ -1,192 +1,270 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Wealth Overview{% endblock %}
+{% block page_title %}Overview{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2>Financial Dashboard</h2>
-        <p class="text-muted">Your complete wealth overview</p>
-    </div>
-</div>
+<div class="p-6 lg:p-10 space-y-8 animate-in fade-in duration-500">
 
-<!-- Key Metrics Row -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary">
-            <div class="card-body">
-                <h5 class="card-title">Net Worth</h5>
-                <h2>₽{{ "%.0f"|format(metrics.net_worth) }}</h2>
-            </div>
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- UPLOAD CTA BANNER -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-3xl p-10 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+        <div>
+            <h2 class="text-2xl font-bold mb-2">Upload Financial Data</h2>
+            <p class="text-indigo-100 max-w-xl">
+                Upload your Excel portfolio file. The system will extract asset data and build your Wealth Pyramid automatically.
+            </p>
+        </div>
+        <div>
+            <a href="/upload" class="inline-flex items-center gap-2 bg-white text-indigo-600 hover:bg-indigo-50 px-6 py-3 rounded-xl font-semibold shadow-md transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Upload Documents
+            </a>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success">
-            <div class="card-body">
-                <h5 class="card-title">Monthly Cashflow</h5>
-                <h2>₽{{ "%.0f"|format(metrics.monthly_cashflow) }}</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-warning">
-            <div class="card-body">
-                <h5 class="card-title">Total Liabilities</h5>
-                <h2>₽{{ "%.0f"|format(metrics.total_liabilities) }}</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-danger">
-            <div class="card-body">
-                <h5 class="card-title">Risk Level</h5>
-                <h2>{{ metrics.risk.level }}</h2>
-                <small>Score: {{ metrics.risk.score }}/10</small>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Charts Row -->
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div id="wealthPyramid"></div>
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- ROW 1: KEY METRICS -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Net Worth -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-3xl p-8 flex items-center justify-between">
+            <div>
+                <p class="label-text text-slate-500">Net Worth</p>
+                <h3 class="metric-value text-3xl font-extrabold text-slate-900 mt-1"><span class="text-slate-400">₽</span>{{ "%.0f"|format(metrics.net_worth) }}</h3>
+            </div>
+            <div class="p-3 bg-slate-100/80 rounded-full">
+                <svg class="w-6 h-6 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
             </div>
         </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div id="allocationPie"></div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div id="netWorthGauge"></div>
+        <!-- Monthly Cashflow -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-3xl p-8 flex items-center justify-between">
+            <div>
+                <p class="label-text text-slate-500">Monthly Cashflow</p>
+                <h3 class="metric-value text-3xl font-extrabold text-slate-900 mt-1"><span class="text-slate-400">₽</span>{{ "%.0f"|format(metrics.monthly_cashflow) }}</h3>
+            </div>
+            <div class="p-3 bg-slate-100/80 rounded-full">
+                <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
             </div>
         </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div id="riskGauge"></div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-body">
-                <div id="cashflowChart"></div>
+        <!-- Total Liabilities -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-3xl p-8 flex items-center justify-between">
+            <div>
+                <p class="label-text text-slate-500">Total Liabilities</p>
+                <h3 class="metric-value text-3xl font-extrabold text-slate-900 mt-1"><span class="text-slate-400">₽</span>{{ "%.0f"|format(metrics.total_liabilities) }}</h3>
+            </div>
+            <div class="p-3 bg-slate-100/80 rounded-full">
+                <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Risk Level -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-3xl p-8 flex items-center justify-between">
+            <div>
+                <p class="label-text text-slate-500">Risk Level</p>
+                <h3 class="metric-value text-3xl font-extrabold text-slate-900 mt-1">{{ metrics.risk.score }}</h3>
+                <p class="text-[11px] uppercase tracking-[0.15em] text-slate-400">/10 score</p>
+            </div>
+            <div class="p-3 bg-slate-100/80 rounded-full">
+                <span class="px-2 py-1 rounded-full text-xs font-bold {% if metrics.risk.score < 4 %}bg-emerald-500{% elif metrics.risk.score < 7 %}bg-amber-500{% else %}bg-rose-500{% endif %} text-white">
+                    {{ metrics.risk.level }}
+                </span>
             </div>
         </div>
     </div>
-</div>
 
-<!-- AI Analysis Section -->
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h4>🤖 AI Financial Advisor</h4>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Select AI Provider:</label>
-                    <select id="aiProvider" class="form-select">
-                        <option value="gemini">Gemini 1.5 Pro (Remote)</option>
-                        <option value="openai">GPT-4 (Remote - requires API key)</option>
-                        <option value="ollama">Ollama (Local - requires running)</option>
-                    </select>
+    <!-- Stale Warning Banner -->
+    {% if stale_count > 0 %}
+    <div class="bg-amber-50/60 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+        <button onclick="toggleStaleList()" class="flex items-center gap-2 bg-amber-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-amber-600 transition cursor-pointer">
+            ⚠️ {{ stale_count }} stale record(s)
+        </button>
+        <div id="staleList" class="stale-list max-h-0 overflow-hidden">
+            <div class="bg-white/60 backdrop-blur-xl border border-amber-200 mt-2 rounded-xl">
+                {% for stale in stale_records %}
+                <div class="stale-item flex justify-between items-center px-4 py-2 border-b border-slate-100/50 text-sm">
+                    <span class="text-slate-700">{{ stale.name }}</span>
+                    <span class="text-rose-500 font-medium">{{ stale.days_stale }}d</span>
+                    <a href="{{ stale.edit_url }}" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium hover:underline">Edit →</a>
                 </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-                <button id="analyzeBtn" class="btn btn-primary btn-lg w-100 mb-3">
-                    Analyze My Portfolio
-                </button>
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- ROW 2: MAIN CHARTS -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Wealth Pyramid -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-2xl p-8">
+            <h3 class="text-base font-semibold uppercase tracking-wider text-slate-700 mb-4">Wealth Pyramid</h3>
+            <div id="wealthPyramid" class="chart-container"></div>
+        </div>
+        <!-- Allocation Pie -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-2xl p-8">
+            <h3 class="text-base font-semibold uppercase tracking-wider text-slate-700 mb-4">Asset Allocation</h3>
+            <div id="allocationPie" class="chart-container"></div>
+        </div>
+    </div>
 
-                <div id="analysisResult" class="mt-3" style="display:none;">
-                    <div class="alert alert-info">
-                        <h5>AI Analysis Results:</h5>
-                        <div id="analysisText" style="white-space: pre-wrap;"></div>
-                    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Net Worth Gauge -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-2xl p-8">
+            <h3 class="text-base font-semibold uppercase tracking-wider text-slate-700 mb-4">Net Worth Gauge</h3>
+            <div id="netWorthGauge" class="chart-container"></div>
+        </div>
+        <!-- Risk Gauge -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-2xl p-8">
+            <h3 class="text-base font-semibold uppercase tracking-wider text-slate-700 mb-4">Risk Gauge</h3>
+            <div id="riskGauge" class="chart-container"></div>
+        </div>
+    </div>
+
+    <!-- Cashflow (full width) -->
+    <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-2xl p-8">
+        <h3 class="text-base font-semibold uppercase tracking-wider text-slate-700 mb-4">Cashflow History</h3>
+        <div id="cashflowChart" class="chart-container" style="min-height: 350px;"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- ROW 3: AI ANALYSIS + TABLES -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- AI Financial Advisor -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-2xl p-8">
+            <h3 class="text-xl font-semibold text-slate-800 mb-4">🤖 AI Financial Advisor</h3>
+
+            <!-- Provider Selection -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Select AI Provider:</label>
+                <select id="aiProvider" class="w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                    <option value="omlx" selected>oMLX (Local - Default)</option>
+                    <option value="gemini">Gemini 1.5 Pro (Remote)</option>
+                    <option value="openai">GPT-4 (Remote - requires API key)</option>
+                    <option value="ollama">Ollama (Local - requires running)</option>
+                </select>
+            </div>
+
+            <!-- Analyze Button -->
+            <button id="analyzeBtn" class="bg-indigo-600 text-white px-6 py-3 rounded-xl w-full font-medium hover:bg-indigo-700 transition shadow-md">
+                Analyze My Portfolio
+            </button>
+
+            <!-- Loading State -->
+            <div id="loadingAnalysis" class="text-center mt-4 hidden">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <p class="text-slate-600 mt-2">Analyzing your portfolio with AI...</p>
+            </div>
+
+            <!-- Analysis Result -->
+            <div id="analysisResult" class="mt-4 hidden">
+                <div class="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl">
+                    <h5 class="font-semibold text-indigo-900 mb-2">AI Analysis Results:</h5>
+                    <div id="analysisText" class="text-slate-800 whitespace-pre-wrap"></div>
                 </div>
+            </div>
 
-                <div id="chatSection" style="display:none;" class="mt-4">
-                    <hr>
-                    <h5>Ask a follow-up question:</h5>
-                    <div class="input-group mb-3">
-                        <input type="text" id="questionInput" class="form-control" placeholder="e.g., Should I sell some crypto to buy real estate?">
-                        <button id="askBtn" class="btn btn-secondary">Ask</button>
-                    </div>
-                    <div id="answerResult"></div>
+            <!-- Chat Section -->
+            <div id="chatSection" class="mt-4 hidden">
+                <hr class="my-4">
+                <h5 class="font-semibold text-slate-800 mb-3">Ask a follow-up question:</h5>
+                <div class="flex gap-2">
+                    <input type="text" id="questionInput" class="flex-1 px-3 py-2 bg-white/80 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" placeholder="e.g., Should I sell some crypto to buy real estate?">
+                    <button id="askBtn" class="px-4 py-2 bg-slate-600 text-white rounded-xl hover:bg-slate-700 transition text-sm font-medium">
+                        Ask
+                    </button>
                 </div>
+                <div id="answerResult" class="mt-3"></div>
+            </div>
+        </div>
 
-                <div id="loadingAnalysis" class="text-center d-none">
-                    <div class="spinner-border text-primary"></div>
-                    <p>Analyzing your portfolio with AI...</p>
-                </div>
+        <!-- Top Assets Table -->
+        <div class="bg-white/60 backdrop-blur-xl shadow-xl rounded-2xl overflow-hidden">
+            <div class="p-8 border-b border-slate-100/50">
+                <h3 class="font-semibold text-slate-800">Top Assets</h3>
+            </div>
+            <div class="overflow-x-auto" style="max-height: 400px; overflow-y: auto;">
+                <table class="w-full text-left text-sm text-slate-600">
+                    <thead class="bg-slate-50/50 text-slate-500 font-semibold uppercase tracking-wider text-xs">
+                        <tr>
+                            <th class="px-6 py-3">Asset Name</th>
+                            <th class="px-6 py-3">Category</th>
+                            <th class="px-6 py-3">Type</th>
+                            <th class="px-6 py-3 text-right">Value (RUB)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100/50">
+                        {% for asset in assets[:10] %}
+                        <tr class="hover:bg-slate-100/30 transition-colors">
+                            <td class="px-6 py-4 text-slate-900 font-medium">{{ asset.name }}</td>
+                            <td class="px-6 py-4">{{ asset.category }}</td>
+                            <td class="px-6 py-4">{{ asset.asset_type }}</td>
+                            <td class="px-6 py-4 text-right font-medium"><span class="text-slate-400">₽</span>{{ "%.0f"|format(asset.current_value) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Assets Table -->
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h4>Top Assets</h4>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Asset Name</th>
-                                <th>Category</th>
-                                <th>Type</th>
-                                <th>Value (RUB)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for asset in assets[:10] %}
-                            <tr>
-                                <td>{{ asset.name }}</td>
-                                <td>{{ asset.category }}</td>
-                                <td>{{ asset.asset_type }}</td>
-                                <td>₽{{ "%.0f"|format(asset.current_value) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
+<!-- Chart Rendering Script -->
 <script>
-// Render charts
+// Render charts with muted/intelliInvoice palette, constrained to containers
 const wealthPyramid = {{ wealth_pyramid|safe }};
 const allocationPie = {{ allocation_pie|safe }};
 const netWorthGauge = {{ net_worth_gauge|safe }};
 const cashflowChart = {{ cashflow_chart|safe }};
 const riskGauge = {{ risk_gauge|safe }};
 
-Plotly.newPlot('wealthPyramid', wealthPyramid.data, wealthPyramid.layout);
-Plotly.newPlot('allocationPie', allocationPie.data, allocationPie.layout);
-Plotly.newPlot('netWorthGauge', netWorthGauge.data, netWorthGauge.layout);
-Plotly.newPlot('cashflowChart', cashflowChart.data, cashflowChart.layout);
-Plotly.newPlot('riskGauge', riskGauge.data, riskGauge.layout);
+// Muted/intelliInvoice colorway — soft emerald, amber, rose (no pure RGB primaries)
+const chartColors = ['#4f46e5','#34d399','#fbbf24','#fb7185','#8b5cf6','#ec4899'];
+
+// Shared layout: responsive, no overflow, muted colorway, transparent paper
+const baseLayout = {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    margin: { t: 15, r: 15, b: 35, l: 35 },
+    font: { color: '#1e293b', family: 'Inter, sans-serif' },
+    colorway: chartColors,
+    autosize: true,
+    showgrid: false
+};
+
+function draw(id, fig) {
+    const layout = Object.assign({}, fig.layout, baseLayout);
+    if (!fig.data || !fig.data.length) return;
+    const traces = Array.isArray(fig.data) ? fig.data : [fig.data];
+    traces.forEach((tr, i) => {
+        if (!tr.marker || !tr.marker.color) {
+            tr.marker = tr.marker || {};
+            tr.marker.color = chartColors[i % chartColors.length];
+        }
+        if (tr.type === 'pie' && !tr.entrywidth) {
+            tr.textinfo = 'label+percent';
+        }
+    });
+    Plotly.newPlot(id, traces, layout, { responsive: true, displayModeBar: false });
+}
+
+draw('wealthPyramid', wealthPyramid);
+draw('allocationPie', allocationPie);
+draw('netWorthGauge', netWorthGauge);
+draw('cashflowChart', cashflowChart);
+draw('riskGauge', riskGauge);
 
 // AI Analysis
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
@@ -196,8 +274,8 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
     const chatSection = document.getElementById('chatSection');
     const analysisText = document.getElementById('analysisText');
 
-    loading.classList.remove('d-none');
-    resultDiv.style.display = 'none';
+    loading.classList.remove('hidden');
+    resultDiv.classList.add('hidden');
 
     try {
         const response = await fetch(`/api/analyze?session_id={{ session_id }}&provider=${provider}`, {
@@ -208,17 +286,17 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
 
         if (response.ok) {
             analysisText.textContent = data.analysis;
-            resultDiv.style.display = 'block';
-            chatSection.style.display = 'block';
+            resultDiv.classList.remove('hidden');
+            chatSection.classList.remove('hidden');
         } else {
             analysisText.textContent = 'Error: ' + (data.detail || 'Analysis failed');
-            resultDiv.style.display = 'block';
+            resultDiv.classList.remove('hidden');
         }
     } catch (error) {
         analysisText.textContent = 'Error: ' + error.message;
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('hidden');
     } finally {
-        loading.classList.add('d-none');
+        loading.classList.add('hidden');
     }
 });
 
@@ -230,7 +308,7 @@ document.getElementById('askBtn').addEventListener('click', async () => {
 
     if (!question) return;
 
-    answerDiv.innerHTML = '<div class="spinner-border text-secondary"></div> Thinking...';
+    answerDiv.innerHTML = '<div class="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-slate-600"></div> <span class="text-slate-500 text-sm ml-2">Thinking...</span>';
 
     try {
         const response = await fetch(`/api/ask?question=${encodeURIComponent(question)}&session_id={{ session_id }}&provider=${provider}`, {
@@ -240,13 +318,24 @@ document.getElementById('askBtn').addEventListener('click', async () => {
         const data = await response.json();
 
         if (response.ok) {
-            answerDiv.innerHTML = `<div class="alert alert-success mt-2">${data.answer}</div>`;
+            answerDiv.innerHTML = `<div class="p-3 bg-emerald-50/60 border border-emerald-200 rounded-lg text-emerald-800">${data.answer}</div>`;
         } else {
-            answerDiv.innerHTML = `<div class="alert alert-danger mt-2">Error: ${data.detail}</div>`;
+            answerDiv.innerHTML = `<div class="p-3 bg-rose-50/60 border border-rose-200 rounded-lg text-rose-800">Error: ${data.detail}</div>`;
         }
     } catch (error) {
-        answerDiv.innerHTML = `<div class="alert alert-danger mt-2">Error: ${error.message}</div>`;
+        answerDiv.innerHTML = `<div class="p-3 bg-rose-50/60 border border-rose-200 rounded-lg text-rose-800">Error: ${error.message}</div>`;
     }
 });
+</script>
+
+<!-- Stale List Toggle Script -->
+<script>
+function toggleStaleList() {
+    const list = document.getElementById('staleList');
+    if (list) {
+        list.classList.toggle('max-h-0');
+        list.classList.toggle('max-h-96');
+    }
+}
 </script>
 {% endblock %}
