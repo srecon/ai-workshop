@@ -21,8 +21,8 @@ class Asset(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     @property
-    def is_stale(self, max_days=90):
-        """Returns True if valuation_date is None or older than max_days days.
+    def is_stale(self):
+        """Returns True if valuation_date is None or older than 90 days.
 
         A record with no valuation date is treated as stale (unknown data is
         worse than stale data — the user can't make informed decisions).
@@ -30,28 +30,38 @@ class Asset(Base):
         if self.valuation_date is None:
             return True
         delta = datetime.datetime.utcnow() - self.valuation_date
-        return delta.days > max_days
+        return delta.days > 90
 
     def record_valuation_change(self, session, field_name, change_reason=None):
         """Record a valuation change in ValuationHistory.
 
         Creates a new ValuationHistory row capturing the old and new values
-        for the specified field.
+        for the specified field. The old value is read from the _old_{field_name}
+        attribute set by the after_insert event; the new value is the current
+        value on the object.
+
+        Clears ``_pending_history`` for this field so the after_flush handler
+        does not create a duplicate record.
         """
-        old_value = getattr(self, field_name, None)
+        old_attr = f'_old_{field_name}'
+        old_value = getattr(self, old_attr, None)
         if old_value is None:
             return
+        new_value = getattr(self, field_name, None)
         history = ValuationHistory(
             asset_id=self.id,
             liability_id=None,
             field_name=field_name,
             old_value=old_value,
-            new_value=old_value,
+            new_value=new_value,
             changed_at=datetime.datetime.utcnow(),
-            change_reason=change_reason,
+            change_reason=change_reason or 'manual',
         )
         session.add(history)
-        session.commit()
+        # Mark this field as handled so before_update skips it
+        if not hasattr(self, '_recorded_fields'):
+            self._recorded_fields = set()
+        self._recorded_fields.add(field_name)
 
 
 class Liability(Base):
@@ -68,8 +78,8 @@ class Liability(Base):
     metadata_json = Column(JSON, default={})
 
     @property
-    def is_stale(self, max_days=90):
-        """Returns True if valuation_date is None or older than max_days days.
+    def is_stale(self):
+        """Returns True if valuation_date is None or older than 90 days.
 
         A record with no valuation date is treated as stale (unknown data is
         worse than stale data — the user can't make informed decisions).
@@ -77,28 +87,38 @@ class Liability(Base):
         if self.valuation_date is None:
             return True
         delta = datetime.datetime.utcnow() - self.valuation_date
-        return delta.days > max_days
+        return delta.days > 90
 
     def record_valuation_change(self, session, field_name, change_reason=None):
         """Record a valuation change in ValuationHistory.
 
         Creates a new ValuationHistory row capturing the old and new values
-        for the specified field.
+        for the specified field. The old value is read from the _old_{field_name}
+        attribute set by the after_insert event; the new value is the current
+        value on the object.
+
+        Clears ``_pending_history`` for this field so the after_flush handler
+        does not create a duplicate record.
         """
-        old_value = getattr(self, field_name, None)
+        old_attr = f'_old_{field_name}'
+        old_value = getattr(self, old_attr, None)
         if old_value is None:
             return
+        new_value = getattr(self, field_name, None)
         history = ValuationHistory(
             asset_id=None,
             liability_id=self.id,
             field_name=field_name,
             old_value=old_value,
-            new_value=old_value,
+            new_value=new_value,
             changed_at=datetime.datetime.utcnow(),
-            change_reason=change_reason,
+            change_reason=change_reason or 'manual',
         )
         session.add(history)
-        session.commit()
+        # Mark this field as handled so before_update skips it
+        if not hasattr(self, '_recorded_fields'):
+            self._recorded_fields = set()
+        self._recorded_fields.add(field_name)
 
 
 class Income(Base):
@@ -146,9 +166,29 @@ class FinancialGoal(Base):
     name = Column(String)
     target_amount = Column(Float)
     target_date = Column(DateTime)
-    currency = Column(String, default='RUB')
+    currency = Column(String)
+    current_value = Column(Float, nullable=True)
     description = Column(String, nullable=True)
     notes = Column(String, nullable=True)
+
+    @property
+    def progress_percentage(self) -> float:
+        """Calculate progress as percentage. Returns 0 if target_amount is 0 or None."""
+        if self.target_amount is None or self.target_amount == 0:
+            return 0.0
+        current = float(self.current_value or 0)
+        target = float(self.target_amount)
+        return (current / target) * 100
+
+    @property
+    def effective_currency(self) -> str:
+        """Return 'RUB' when currency is None (pre-migration data handling).
+
+        SQLite returns None for pre-existing rows where the column didn't exist.
+        None != 'RUB' causes existing records to be treated as "unknown currency"
+        instead of Russian ruble. This property normalizes that.
+        """
+        return self.currency if self.currency is not None else 'RUB'
 
 # Create engine and session
 engine = create_engine('sqlite:///wealth_dashboard.db', connect_args={'check_same_thread': False})
@@ -200,3 +240,129 @@ def get_stale_records(session) -> list[dict]:
         })
 
     return stale_items
+
+
+# =============================================================================
+# Task Group 4a + 4b: SQLAlchemy event handlers for Asset and Liability
+# =============================================================================
+
+from sqlalchemy import event
+
+
+# --- Task Group 4a: Asset events ---
+
+@event.listens_for(Asset, 'before_update')
+def asset_before_update(mapper, connection, target):
+    """Detect valuation field changes and store history for after_flush."""
+    tracked_fields = ['current_value', 'purchase_price']
+    history_list = []
+    for field_name in tracked_fields:
+        old_value = getattr(target, f'_old_{field_name}', None)
+        new_value = getattr(target, field_name, None)
+        if old_value != new_value and old_value is not None:
+            # Skip fields already handled by record_valuation_change()
+            if hasattr(target, '_recorded_fields') and field_name in target._recorded_fields:
+                continue
+            history_list.append({
+                'field_name': field_name,
+                'old_value': old_value,
+                'new_value': new_value,
+            })
+            setattr(target, f'_old_{field_name}', new_value)
+    # Always accumulate — do NOT guard with hasattr, so multiple updates
+    # to the same field in one session are all recorded.
+    if not hasattr(target, '_pending_history'):
+        target._pending_history = []
+    target._pending_history.extend(history_list)
+
+
+@event.listens_for(Asset, 'after_insert')
+def asset_after_insert(mapper, connection, target):
+    """Store old values after inserting a new Asset."""
+    for field_name in ['current_value', 'purchase_price']:
+        value = getattr(target, field_name, None)
+        if value is not None:
+            setattr(target, f'_old_{field_name}', value)
+
+
+# --- Task Group 4b: Liability events ---
+
+@event.listens_for(Liability, 'before_update')
+def liability_before_update(mapper, connection, target):
+    """Detect remaining_balance changes and store history for after_flush."""
+    history_list = []
+    old_value = getattr(target, '_old_remaining_balance', None)
+    new_value = getattr(target, 'remaining_balance', None)
+    if old_value != new_value and old_value is not None:
+        # Skip fields already handled by record_valuation_change()
+        if hasattr(target, '_recorded_fields') and 'remaining_balance' in target._recorded_fields:
+            history_list = []
+        else:
+            history_list.append({
+                'field_name': 'remaining_balance',
+                'old_value': old_value,
+                'new_value': new_value,
+            })
+            setattr(target, '_old_remaining_balance', new_value)
+    # Always accumulate — do NOT guard with hasattr, so multiple updates
+    # to remaining_balance in one session are all recorded.
+    if not hasattr(target, '_pending_history'):
+        target._pending_history = []
+    target._pending_history.extend(history_list)
+
+
+@event.listens_for(Liability, 'after_insert')
+def liability_after_insert(mapper, connection, target):
+    """Store old values after inserting a new Liability."""
+    value = getattr(target, 'remaining_balance', None)
+    if value is not None:
+        setattr(target, '_old_remaining_balance', value)
+        target._pending_history = [{
+            'field_name': 'remaining_balance',
+            'old_value': value,
+            'new_value': value,
+        }]  # Populate so after_flush creates ValuationHistory record
+
+
+# --- Session-level after_flush: create ValuationHistory records ---
+
+# Guard to prevent duplicate registration when module is reloaded
+_registration_done = False
+
+def register_valuation_history_events():
+    """Register after_flush handler on Session CLASS so it fires for ALL sessions.
+
+    Previously registered on SessionLocal (specific instance), which meant
+    test sessions never fired the handler.  Class-level registration makes
+    the handler fire on every Session — including those created by tests.
+    """
+    global _registration_done
+    from sqlalchemy.orm.session import Session
+    from sqlalchemy import event
+
+    if _registration_done:
+        return  # Already registered on the Session class
+    _registration_done = True
+
+    def create_valuation_history(session, context):
+        """Create ValuationHistory records for Assets and Liabilities with _pending_history."""
+        for obj in list(session.new) + list(session.dirty):
+            if isinstance(obj, (Asset, Liability)) and hasattr(obj, '_pending_history'):
+                for h in obj._pending_history:
+                    history_record = ValuationHistory(
+                        asset_id=obj.id if isinstance(obj, Asset) else None,
+                        liability_id=obj.id if isinstance(obj, Liability) else None,
+                        field_name=h['field_name'],
+                        old_value=h['old_value'],
+                        new_value=h['new_value'],
+                        changed_at=datetime.datetime.utcnow(),
+                        change_reason='auto_update',
+                    )
+                    session.add(history_record)
+                delattr(obj, '_pending_history')
+
+    event.listen(Session, 'after_flush', create_valuation_history)
+
+
+# Register session-level after_flush handler at module load time (on Session class)
+register_valuation_history_events()
