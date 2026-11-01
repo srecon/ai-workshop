@@ -1,19 +1,19 @@
 ---
 name: architect-involvement
-description: Проверяет, нужен ли корпоративный архитектор для proposal (OpenSpec change) по архитектурным стандартам через Nimble 9B.
+description: Checks whether a corporate architect is needed for a proposal (OpenSpec change) according to architectural standards via Nimble 9B.
 color: Green
 ---
 
 # Architect Involvement
 
-Роль: оркестрация проверки. Логика — в `tools/architect_involvement.py`, не дублируй её.
+Role: orchestration of the check. The logic is in `tools/architect_involvement.py`; do not duplicate it.
 
-## Триггер
+## Trigger
 
-Пользователь просит проверить proposal на архитектурную значимость,
-или в репо появился новый `changes/<id>/proposal.md`.
+The user asks to check a proposal for architectural significance,
+or a new `changes/<id>/proposal.md` appears in the repo.
 
-## Вызов
+## Invocation
 
 ```bash
 python3 tools/architect_involvement.py \
@@ -22,81 +22,85 @@ python3 tools/architect_involvement.py \
   --output changes/<id>/architect-involvement.json
 
 ```
-Никогда не вызывай Nimble напрямую. Никогда не интерпретируй stdout.
-Решение — только поле decision в JSON.
+Never call Nimble directly. Never interpret stdout.
+The decision is only the `decision` field in the JSON.
 
 ## Exit codes
 
-Код	Действие
-0	Читать JSON, сформировать отчёт
-1	Nimble недоступен — остановиться, сообщить пользователю
-2	Ошибка входных данных — показать stderr, остановиться
-3	Timeout — предложить --timeout 300
+| Code | Action |
+|------|--------|
+| 0 | Read JSON, generate report |
+| 1 | Nimble unavailable — stop, inform the user |
+| 2 | Input data error — show stderr, stop |
+| 3 | Timeout — suggest `--timeout 300` |
 
-## Решение
-decision	Что делать
-architect_required	Уведомить: нужен архитектор. Показать triggered_standards
-architect_not_required	Уведомить: архитектор не требуется
-escalate	Уведомить: нужна ручная проверка. Показать unclear-требования
-Не подменяй decision собственным выводом.
+## Decision
 
-## Формат отчёта
+| decision | What to do |
+|----------|------------|
+| architect_required | Notify: architect needed. Show `triggered_standards` |
+| architect_not_required | Notify: architect not required |
+| escalate | Notify: manual review needed. Show unclear requirements |
 
-Используй поле `rationale` из JSON как основу. Отчёт делится
-на два блока: **что проверено** и **что пропущено**.
+Do not substitute `decision` with your own conclusion.
+
+## Report format
+
+Use the `rationale` field from the JSON as the basis. The report is divided
+into two blocks: **what was checked** and **what was skipped**.
 
 ```markdown
-## Проверка архитектурной значимости
+## Architectural significance check
 
 **Proposal:** `changes/<id>/proposal.md`
-**Решение:** `<decision>`
+**Decision:** `<decision>`
 
-**Обоснование:** <rationale из JSON>
+**Rationale:** <rationale from JSON>
 
-### Проверено через Nimble
+### Checked via Nimble
 
-| Стандарт | Версия | applicable | not_applicable | unclear |
-|----------|--------|-----------|----------------|---------|
+| Standard | Version | applicable | not_applicable | unclear |
+|----------|---------|------------|----------------|---------|
 | reliability | 2.0 | 0 | 6 | 0 |
 
-### Пропущено по precheck
+### Skipped by precheck
 
 `ai_ml`, `db_design`, `gateways`, `integrations`, `monitoring`, `platform_ready`
-— нет сигналов в proposal.
+— no signals in the proposal.
 
-### Требования, требующие внимания
+### Requirements requiring attention
 
-(показывать только если есть applicable или unclear)
+(show only if there are applicable or unclear)
 
 - `<code>` (<standard>) — <verdict>, conf=<X>
 
-### Артефакт
+### Artifact
 
 `changes/<id>/architect-involvement.json`
 ```
 
-**Правила:**
-- Если `decision = architect_not_required` и блок «Проверено» не пуст —
-  обязательно показать его. Это доказательство, что проверка была.
-- Блок «Пропущено» оставлять всегда — он объясняет, почему проверка
-  заняла мало времени.
-- Блок «Требования» показывать только если есть `applicable` или `unclear`.
+**Rules:**
+- If `decision = architect_not_required` and the "Checked" block is not empty —
+  be sure to show it. This is proof that the check was performed.
+- Always leave the "Skipped" block — it explains why the check
+  took little time.
+- Show the "Requirements" block only if there are `applicable` or `unclear`.
 
-## Политика
-Не делай повторных вызовов без причины.
+## Policy
+Do not make repeated calls without reason.
 
-Не редактируй architect-involvement.json вручную.
+Do not edit architect-involvement.json manually.
 
-Не выдумывай требования, которых нет в JSON.
+Do not invent requirements that are not in the JSON.
 
 ````
-# Как сохранить
+# How to save
 
-У меня нет возможности прикрепить файл в этом интерфейсе, но вот два способа:
+I cannot attach a file in this interface, but here are two ways:
 
-### Способ 1: вручную
+### Method 1: manually
 
 ```bash
 mkdir -p skills
-# скопируй блок выше в файл skills/architect-involvement.md
+# copy the block above into the file skills/architect-involvement.md
 ````
