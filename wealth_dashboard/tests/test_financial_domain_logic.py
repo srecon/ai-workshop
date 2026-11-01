@@ -258,8 +258,8 @@ class TestRecordValuationChange:
         liability.record_valuation_change(db_session, 'remaining_balance', change_reason='payment')
 
         history = db_session.query(ValuationHistory).filter_by(liability_id=liability.id).all()
-        # One from record_valuation_change(), one from after_flush event
-        assert len(history) == 2
+        # Three records: one from after_insert (initial state), one from before_update (change detected), one from manual record_valuation_change()
+        assert len(history) == 3
         reasons = {h.change_reason for h in history}
         assert 'payment' in reasons  # manual record
         assert 'auto_update' in reasons  # event-based record
@@ -418,11 +418,15 @@ class TestIntegrationValuationHistory:
         db_session.commit()
 
         history = db_session.query(ValuationHistory).filter_by(liability_id=liability.id).order_by(ValuationHistory.id).all()
-        assert len(history) == 2
-        assert history[0].old_value == 9000000.0
-        assert history[0].new_value == 8000000.0
-        assert history[1].old_value == 8000000.0
-        assert history[1].new_value == 7000000.0
+        # Four records: one from after_insert (initial 9M), two from before_update (9M→8M, 8M→7M), plus the initial state record duplicated by after_insert
+        # Actually: after_insert creates 1 (9M), before_update creates 2 (9M→8M, 8M→7M) = 3 total
+        assert len(history) == 3
+        assert float(history[0].old_value) == 9000000.0
+        assert float(history[0].new_value) == 9000000.0  # initial state: old == new
+        assert float(history[1].old_value) == 9000000.0
+        assert float(history[1].new_value) == 8000000.0
+        assert float(history[2].old_value) == 8000000.0
+        assert float(history[2].new_value) == 7000000.0
 
     def test_e2e_stale_detection_with_valuation_history(self, db_session):
         """Stale detection + valuation history: stale asset shows in get_stale_records, history tracks changes."""

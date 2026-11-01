@@ -1,194 +1,360 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Wealth Overview{% endblock %}
+{% block page_title %}Overview{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2>Financial Dashboard</h2>
-        <p class="text-muted">Your complete wealth overview</p>
-    </div>
-</div>
+<div class="p-6 lg:p-10 space-y-8" style="animation: fadeIn 500ms ease forwards;">
+<style>@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }</style>
 
-<!-- Key Metrics Row -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary">
-            <div class="card-body">
-                <h5 class="card-title">Net Worth</h5>
-                <h2>₽{{ "%.0f"|format(metrics.net_worth) }}</h2>
-            </div>
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- UPLOAD CTA BANNER                           -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="rounded-3xl p-10 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6"
+         style="background: linear-gradient(135deg, var(--wd-accent), #7c3aed);">
+        <div>
+            <h2 class="text-2xl font-bold mb-2">Upload Financial Data</h2>
+            <p class="text-white/80 max-w-xl">
+                Upload your Excel portfolio file. The system will extract asset data and build your Wealth Pyramid automatically.
+            </p>
+        </div>
+        <div>
+            <a href="/upload" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold shadow-md"
+               style="background-color: var(--wd-bg-primary); color: var(--wd-accent);"
+               aria-label="Navigate to upload page">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Upload Documents
+            </a>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success">
-            <div class="card-body">
-                <h5 class="card-title">Monthly Cashflow</h5>
-                <h2>₽{{ "%.0f"|format(metrics.monthly_cashflow) }}</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-warning">
-            <div class="card-body">
-                <h5 class="card-title">Total Liabilities</h5>
-                <h2>₽{{ "%.0f"|format(metrics.total_liabilities) }}</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-danger">
-            <div class="card-body">
-                <h5 class="card-title">Risk Level</h5>
-                <h2>{{ metrics.risk.level }}</h2>
-                <small>Score: {{ metrics.risk.score }}/10</small>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Charts Row -->
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div id="wealthPyramid"></div>
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- ROW 1: KEY METRICS                          -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Net Worth -->
+        <div class="rounded-3xl p-8 flex items-center justify-between shadow-xl"
+             style="background-color: var(--wd-bg-card);">
+            <div>
+                <p class="label-text" style="color: var(--wd-text-muted)">Net Worth</p>
+                <h3 class="metric-value text-3xl font-extrabold mt-1" style="color: var(--wd-text-primary)">
+                    <span style="color: var(--wd-text-muted)">₽</span>{{ "%.0f"|format(metrics.net_worth) }}
+                </h3>
+            </div>
+            <div class="p-3 rounded-full" style="background-color: var(--wd-bg-secondary);">
+                <svg class="w-6 h-6" style="color: var(--wd-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
             </div>
         </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div id="allocationPie"></div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div id="netWorthGauge"></div>
+        <!-- Monthly Cashflow -->
+        <div class="rounded-3xl p-8 flex items-center justify-between shadow-xl"
+             style="background-color: var(--wd-bg-card);">
+            <div>
+                <p class="label-text" style="color: var(--wd-text-muted)">Monthly Cashflow</p>
+                <h3 class="metric-value text-3xl font-extrabold mt-1" style="color: var(--wd-text-primary)">
+                    <span style="color: var(--wd-text-muted)">₽</span>{{ "%.0f"|format(metrics.monthly_cashflow) }}
+                </h3>
+            </div>
+            <div class="p-3 rounded-full" style="background-color: var(--wd-bg-secondary);">
+                <svg class="w-6 h-6" style="color: var(--wd-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                </svg>
             </div>
         </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div id="riskGauge"></div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-body">
-                <div id="cashflowChart"></div>
+        <!-- Total Liabilities -->
+        <div class="rounded-3xl p-8 flex items-center justify-between shadow-xl"
+             style="background-color: var(--wd-bg-card);">
+            <div>
+                <p class="label-text" style="color: var(--wd-text-muted)">Total Liabilities</p>
+                <h3 class="metric-value text-3xl font-extrabold mt-1" style="color: var(--wd-text-primary)">
+                    <span style="color: var(--wd-text-muted)">₽</span>{{ "%.0f"|format(metrics.total_liabilities) }}
+                </h3>
+            </div>
+            <div class="p-3 rounded-full" style="background-color: var(--wd-bg-secondary);">
+                <svg class="w-6 h-6" style="color: var(--wd-warning);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Risk Level -->
+        <div class="rounded-3xl p-8 flex items-center justify-between shadow-xl"
+             style="background-color: var(--wd-bg-card);">
+            <div>
+                <p class="label-text" style="color: var(--wd-text-muted)">Risk Level</p>
+                <h3 class="metric-value text-3xl font-extrabold mt-1" style="color: var(--wd-text-primary)">{{ metrics.risk.score }}</h3>
+                <p class="text-[11px] uppercase tracking-[0.15em]" style="color: var(--wd-text-muted)">/10 score</p>
+            </div>
+            <div class="p-3 rounded-full" style="background-color: var(--wd-bg-secondary);">
+                <span class="px-2 py-1 rounded-full text-xs font-bold text-white"
+                      style="{% if metrics.risk.score < 4 %}background-color: var(--wd-success);{% elif metrics.risk.score < 7 %}background-color: var(--wd-warning);{% else %}background-color: var(--wd-error);{% endif %}">
+                    {{ metrics.risk.level }}
+                </span>
             </div>
         </div>
     </div>
-</div>
 
-<!-- AI Analysis Section -->
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h4>🤖 AI Financial Advisor</h4>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Select AI Provider:</label>
-                    <select id="aiProvider" class="form-select">
-                        <option value="gemini">Gemini 1.5 Pro (Remote)</option>
-                        <option value="openai">GPT-4 (Remote - requires API key)</option>
-                        <option value="ollama">Ollama (Local - requires running)</option>
-                    </select>
+    <!-- Stale Warning Banner -->
+    {% if stale_count > 0 %}
+    <div class="rounded-2xl p-4 flex items-start gap-3"
+         style="background-color: var(--wd-warning); border: 1px solid var(--wd-warning);"
+         role="alert" aria-live="assertive">
+        <button onclick="toggleStaleList()" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
+                style="background-color: var(--wd-warning); color: white;"
+                aria-label="View {{ stale_count }} stale record(s)">
+            ⚠️ {{ stale_count }} stale record(s)
+        </button>
+        <div id="staleList" class="stale-list max-h-0 overflow-hidden">
+            <div class="rounded-xl" style="background-color: var(--wd-bg-card); border: 1px solid var(--wd-warning);">
+                {% for stale in stale_records %}
+                <div class="flex justify-between items-center px-4 py-2" style="border-bottom: 1px solid var(--wd-border-subtle);">
+                    <span style="color: var(--wd-text-primary); font-size: 0.875rem;">{{ stale.name }}</span>
+                    <span style="color: var(--wd-error); font-weight: 500; font-size: 0.875rem;">{{ stale.days_stale }}d</span>
+                    <a href="{{ stale.edit_url }}" class="text-xs font-medium underline" style="color: var(--wd-accent);" aria-label="Edit {{ stale.name }}">Edit →</a>
                 </div>
-
-                <button id="analyzeBtn" class="btn btn-primary btn-lg w-100 mb-3">
-                    Analyze My Portfolio
-                </button>
-
-                <div id="analysisResult" class="mt-3" style="display:none;">
-                    <div class="alert alert-info">
-                        <h5>AI Analysis Results:</h5>
-                        <div id="analysisText" style="white-space: pre-wrap;"></div>
-                    </div>
-                </div>
-
-                <div id="chatSection" style="display:none;" class="mt-4">
-                    <hr>
-                    <h5>Ask a follow-up question:</h5>
-                    <div class="input-group mb-3">
-                        <input type="text" id="questionInput" class="form-control" placeholder="e.g., Should I sell some crypto to buy real estate?">
-                        <button id="askBtn" class="btn btn-secondary">Ask</button>
-                    </div>
-                    <div id="answerResult"></div>
-                </div>
-
-                <div id="loadingAnalysis" class="text-center d-none">
-                    <div class="spinner-border text-primary"></div>
-                    <p>Analyzing your portfolio with AI...</p>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
-</div>
+    {% endif %}
 
-<!-- Assets Table -->
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h4>Top Assets</h4>
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- ROW 2: MAIN CHARTS (with skeleton loaders)  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Wealth Pyramid -->
+        <div class="rounded-2xl p-8 shadow-xl" style="background-color: var(--wd-bg-card);">
+            <h3 class="text-base font-semibold uppercase tracking-wider mb-4" style="color: var(--wd-text-secondary)">Wealth Pyramid</h3>
+            <div class="chart-container" id="wealthPyramidWrapper" style="position: relative;">
+                <div class="chart-skeleton skeleton" id="wealthPyramidSkeleton"></div>
+                <div id="wealthPyramid" style="position: absolute; inset: 0;"></div>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Asset Name</th>
-                                <th>Category</th>
-                                <th>Type</th>
-                                <th>Value (RUB)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for asset in assets[:10] %}
-                            <tr>
-                                <td>{{ asset.name }}</td>
-                                <td>{{ asset.category }}</td>
-                                <td>{{ asset.asset_type }}</td>
-                                <td>₽{{ "%.0f"|format(asset.current_value) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        </div>
+        <!-- Allocation Pie -->
+        <div class="rounded-2xl p-8 shadow-xl" style="background-color: var(--wd-bg-card);">
+            <h3 class="text-base font-semibold uppercase tracking-wider mb-4" style="color: var(--wd-text-secondary)">Asset Allocation</h3>
+            <div class="chart-container" id="allocationPieWrapper" style="position: relative;">
+                <div class="chart-skeleton skeleton" id="allocationPieSkeleton"></div>
+                <div id="allocationPie" style="position: absolute; inset: 0;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Net Worth Gauge -->
+        <div class="rounded-2xl p-8 shadow-xl" style="background-color: var(--wd-bg-card);">
+            <h3 class="text-base font-semibold uppercase tracking-wider mb-4" style="color: var(--wd-text-secondary)">Net Worth Gauge</h3>
+            <div class="chart-container" id="netWorthGaugeWrapper" style="position: relative;">
+                <div class="chart-skeleton skeleton" id="netWorthGaugeSkeleton"></div>
+                <div id="netWorthGauge" style="position: absolute; inset: 0;"></div>
+            </div>
+        </div>
+        <!-- Risk Gauge -->
+        <div class="rounded-2xl p-8 shadow-xl" style="background-color: var(--wd-bg-card);">
+            <h3 class="text-base font-semibold uppercase tracking-wider mb-4" style="color: var(--wd-text-secondary)">Risk Gauge</h3>
+            <div class="chart-container" id="riskGaugeWrapper" style="position: relative;">
+                <div class="chart-skeleton skeleton" id="riskGaugeSkeleton"></div>
+                <div id="riskGauge" style="position: absolute; inset: 0;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cashflow (full width) -->
+    <div class="rounded-2xl p-8 shadow-xl" style="background-color: var(--wd-bg-card);">
+        <h3 class="text-base font-semibold uppercase tracking-wider mb-4" style="color: var(--wd-text-secondary)">Cashflow History</h3>
+        <div class="chart-container" id="cashflowChartWrapper" style="position: relative; min-height: 350px;">
+            <div class="chart-skeleton skeleton" id="cashflowChartSkeleton" style="height: 350px;"></div>
+            <div id="cashflowChart" style="position: absolute; inset: 0;"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- ROW 3: AI ANALYSIS + TABLES                 -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- AI Financial Advisor -->
+        <div class="rounded-2xl p-8 shadow-xl" style="background-color: var(--wd-bg-card);">
+            <h3 class="text-xl font-semibold mb-4" style="color: var(--wd-text-primary)">🤖 AI Financial Advisor</h3>
+
+            <!-- Provider Selection -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2" style="color: var(--wd-text-secondary);" for="aiProvider">Select AI Provider:</label>
+                <select id="aiProvider" class="w-full px-3 py-2 rounded-xl text-sm"
+                        style="background-color: var(--wd-bg-primary); color: var(--wd-text-primary); border: 1px solid var(--wd-border-subtle);"
+                        aria-describedby="aiProviderHelp">
+                    <option value="omlx" selected>oMLX (Local - Default)</option>
+                    <option value="gemini">Gemini 1.5 Pro (Remote)</option>
+                    <option value="openai">GPT-4 (Remote - requires API key)</option>
+                    <option value="ollama">Ollama (Local - requires running)</option>
+                </select>
+                <p id="aiProviderHelp" class="text-xs mt-1" style="color: var(--wd-text-muted);">Choose the AI engine for portfolio analysis</p>
+            </div>
+
+            <!-- Analyze Button -->
+            <button id="analyzeBtn" class="w-full px-6 py-3 rounded-xl font-medium shadow-md"
+                    style="background-color: var(--wd-accent); color: white;"
+                    aria-label="Analyze my portfolio with selected AI provider">
+                Analyze My Portfolio
+            </button>
+
+            <!-- Loading State -->
+            <div id="loadingAnalysis" class="text-center mt-4 hidden">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--wd-accent);"></div>
+                <p class="mt-2" style="color: var(--wd-text-secondary);">Analyzing your portfolio with AI...</p>
+            </div>
+
+            <!-- Analysis Result -->
+            <div id="analysisResult" class="mt-4 hidden" aria-live="polite">
+                <div class="p-4 rounded-xl" style="background-color: var(--wd-accent-light); border: 1px solid var(--wd-accent);">
+                    <h5 class="font-semibold mb-2" style="color: var(--wd-accent);">AI Analysis Results:</h5>
+                    <div id="analysisText" class="whitespace-pre-wrap" style="color: var(--wd-text-primary);"></div>
                 </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div id="chatSection" class="mt-4 hidden">
+                <hr style="border-color: var(--wd-border-subtle); margin: 1rem 0;">
+                <h5 class="font-semibold mb-3" style="color: var(--wd-text-primary);">Ask a follow-up question:</h5>
+                <div class="flex gap-2">
+                    <input type="text" id="questionInput" class="flex-1 px-3 py-2 rounded-xl text-sm"
+                           style="background-color: var(--wd-bg-primary); color: var(--wd-text-primary); border: 1px solid var(--wd-border-subtle);"
+                           placeholder="e.g., Should I sell some crypto to buy real estate?"
+                           aria-label="Follow-up question for AI advisor">
+                    <button id="askBtn" class="px-4 py-2 rounded-xl text-sm font-medium"
+                            style="background-color: var(--wd-text-secondary); color: white;"
+                            aria-label="Submit follow-up question">
+                        Ask
+                    </button>
+                </div>
+                <div id="answerResult" class="mt-3" aria-live="polite"></div>
+            </div>
+        </div>
+
+        <!-- Top Assets Table -->
+        <div class="rounded-2xl overflow-hidden shadow-xl" style="background-color: var(--wd-bg-card);">
+            <div class="p-8" style="border-bottom: 1px solid var(--wd-border-subtle);">
+                <h3 class="font-semibold" style="color: var(--wd-text-primary);">Top Assets</h3>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="w-full text-left text-sm" style="color: var(--wd-text-secondary);" aria-label="Top 10 assets by value">
+                    <thead style="background-color: var(--wd-bg-secondary); color: var(--wd-text-muted); font-size: 0.75rem;">
+                        <tr>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wider">Asset Name</th>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wider">Category</th>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 font-semibold uppercase tracking-wider text-right">Value (RUB)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in assets[:10] %}
+                        <tr style="border-bottom: 1px solid var(--wd-border-subtle);">
+                            <td class="px-6 py-4" style="color: var(--wd-text-primary); font-weight: 500;">{{ asset.name }}</td>
+                            <td class="px-6 py-4">{{ asset.category }}</td>
+                            <td class="px-6 py-4">{{ asset.asset_type }}</td>
+                            <td class="px-6 py-4 text-right" style="color: var(--wd-text-primary); font-weight: 500;">
+                                <span style="color: var(--wd-text-muted)">₽</span>{{ "%.0f"|format(asset.current_value) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// Render charts
-const wealthPyramid = {{ wealth_pyramid|safe }};
-const allocationPie = {{ allocation_pie|safe }};
-const netWorthGauge = {{ net_worth_gauge|safe }};
-const cashflowChart = {{ cashflow_chart|safe }};
-const riskGauge = {{ risk_gauge|safe }};
+// Chart data passed from Flask
+const wealthPyramidData = {{ wealth_pyramid|safe }};
+const allocationPieData = {{ allocation_pie|safe }};
+const netWorthGaugeData = {{ net_worth_gauge|safe }};
+const cashflowChartData = {{ cashflow_chart|safe }};
+const riskGaugeData = {{ risk_gauge|safe }};
 
-Plotly.newPlot('wealthPyramid', wealthPyramid.data, wealthPyramid.layout);
-Plotly.newPlot('allocationPie', allocationPie.data, allocationPie.layout);
-Plotly.newPlot('netWorthGauge', netWorthGauge.data, netWorthGauge.layout);
-Plotly.newPlot('cashflowChart', cashflowChart.data, cashflowChart.layout);
-Plotly.newPlot('riskGauge', riskGauge.data, riskGauge.layout);
+const chartColors = ['#4f46e5','#34d399','#fbbf24','#fb7185','#8b5cf6','#ec4899'];
 
-// AI Analysis
+let chartsInitialized = false;
+let chartResizeTimer = null;
+
+function hideSkeletons() {
+    var skeletons = ['wealthPyramidSkeleton','allocationPieSkeleton','netWorthGaugeSkeleton','riskGaugeSkeleton','cashflowChartSkeleton'];
+    skeletons.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+}
+
+function drawCharts() {
+    if (chartsInitialized) return;
+    chartsInitialized = true;
+
+    var figures = [
+        { id: 'wealthPyramid', data: wealthPyramidData },
+        { id: 'allocationPie', data: allocationPieData },
+        { id: 'netWorthGauge', data: netWorthGaugeData },
+        { id: 'cashflowChart', data: cashflowChartData },
+        { id: 'riskGauge', data: riskGaugeData }
+    ];
+
+    // Detect current theme for chart fonts
+    var currentTheme = document.documentElement.getAttribute('data-theme');
+    var textColor = currentTheme === 'dark' ? '#f8fafc' : '#0f172a';
+    var gridColor = currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+    var baseLayout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        margin: { t: 15, r: 15, b: 35, l: 35 },
+        font: { color: textColor, family: 'Inter, sans-serif' },
+        colorway: chartColors,
+        autosize: true,
+        showgrid: false
+    };
+
+    figures.forEach(function(fig) {
+        var containerEl = document.getElementById(fig.id);
+        if (!containerEl || typeof fig.data !== 'object' || !fig.data.data) return;
+
+        var layout = Object.assign({}, fig.data.layout || {}, baseLayout);
+        var traces = Array.isArray(fig.data.data) ? fig.data.data : [fig.data.data];
+        traces.forEach(function(tr, i) {
+            if (!tr.marker || !tr.marker.color) {
+                tr.marker = tr.marker || {};
+                tr.marker.color = chartColors[i % chartColors.length];
+            }
+            if (tr.type === 'pie' && !tr.entrywidth) {
+                tr.textinfo = 'label+percent';
+            }
+        });
+
+        Plotly.newPlot(fig.id, traces, layout, { responsive: true, displayModeBar: false }).then(function() {
+            hideSkeletons();
+        });
+    });
+}
+
+// Task 3.2: Responsive resize handler for charts
+function handleChartResize() {
+    clearTimeout(chartResizeTimer);
+    chartResizeTimer = setTimeout(function() {
+        var figureIds = ['wealthPyramid','allocationPie','netWorthGauge','cashflowChart','riskGauge'];
+        figureIds.forEach(function(id) {
+            if (typeof Plotly !== 'undefined') {
+                Plotly.Plots.resize(document.getElementById(id));
+            }
+        });
+    }, 150);
+}
+
+// Initial render
+drawCharts();
+window.addEventListener('resize', handleChartResize);
+
+// AI Analysis (preserved from original)
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
     const provider = document.getElementById('aiProvider').value;
     const loading = document.getElementById('loadingAnalysis');
@@ -196,8 +362,8 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
     const chatSection = document.getElementById('chatSection');
     const analysisText = document.getElementById('analysisText');
 
-    loading.classList.remove('d-none');
-    resultDiv.style.display = 'none';
+    loading.classList.remove('hidden');
+    resultDiv.classList.add('hidden');
 
     try {
         const response = await fetch(`/api/analyze?session_id={{ session_id }}&provider=${provider}`, {
@@ -208,29 +374,32 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
 
         if (response.ok) {
             analysisText.textContent = data.analysis;
-            resultDiv.style.display = 'block';
-            chatSection.style.display = 'block';
+            resultDiv.classList.remove('hidden');
+            chatSection.classList.remove('hidden');
+            showToast('Portfolio analyzed successfully!', 'success');
         } else {
             analysisText.textContent = 'Error: ' + (data.detail || 'Analysis failed');
-            resultDiv.style.display = 'block';
+            resultDiv.classList.remove('hidden');
+            showToast('Analysis failed: ' + (data.detail || 'Unknown error'), 'error');
         }
     } catch (error) {
         analysisText.textContent = 'Error: ' + error.message;
-        resultDiv.style.display = 'block';
+        resultDiv.classList.remove('hidden');
+        showToast('Network error: ' + error.message, 'error');
     } finally {
-        loading.classList.add('d-none');
+        loading.classList.add('hidden');
     }
 });
 
-// Follow-up question
+// Follow-up question (preserved from original)
 document.getElementById('askBtn').addEventListener('click', async () => {
     const question = document.getElementById('questionInput').value;
     const provider = document.getElementById('aiProvider').value;
     const answerDiv = document.getElementById('answerResult');
 
-    if (!question) return;
+    if (!question.trim()) return;
 
-    answerDiv.innerHTML = '<div class="spinner-border text-secondary"></div> Thinking...';
+    answerDiv.innerHTML = '<div class="inline-block animate-spin rounded-full h-5 w-5 border-b-2" style="border-color: var(--wd-text-secondary);"></div> <span class="text-sm" style="color: var(--wd-text-muted);">Thinking...</span>';
 
     try {
         const response = await fetch(`/api/ask?question=${encodeURIComponent(question)}&session_id={{ session_id }}&provider=${provider}`, {
@@ -240,13 +409,24 @@ document.getElementById('askBtn').addEventListener('click', async () => {
         const data = await response.json();
 
         if (response.ok) {
-            answerDiv.innerHTML = `<div class="alert alert-success mt-2">${data.answer}</div>`;
+            answerDiv.innerHTML = `<div class="p-3 rounded-lg text-sm" style="background-color: var(--wd-success); color: white;">${data.answer}</div>`;
         } else {
-            answerDiv.innerHTML = `<div class="alert alert-danger mt-2">Error: ${data.detail}</div>`;
+            answerDiv.innerHTML = `<div class="p-3 rounded-lg text-sm" style="background-color: var(--wd-error); color: white;">Error: ${data.detail}</div>`;
         }
     } catch (error) {
-        answerDiv.innerHTML = `<div class="alert alert-danger mt-2">Error: ${error.message}</div>`;
+        answerDiv.innerHTML = `<div class="p-3 rounded-lg text-sm" style="background-color: var(--wd-error); color: white;">Error: ${error.message}</div>`;
     }
 });
+</script>
+
+<!-- Stale List Toggle Script (preserved from original) -->
+<script>
+function toggleStaleList() {
+    const list = document.getElementById('staleList');
+    if (list) {
+        list.classList.toggle('max-h-0');
+        list.classList.toggle('max-h-96');
+    }
+}
 </script>
 {% endblock %}

@@ -1,85 +1,255 @@
 {% extends "base.html" %}
 
+{% block page_title %}Upload{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h3>Upload Your Financial Data</h3>
-            </div>
-            <div class="card-body">
-                <form id="uploadForm" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label for="file" class="form-label">Excel File (.xlsx or .xls)</label>
-                        <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls" required>
-                        <div class="form-text">
-                            Your file should contain sheets for: Real Estate, Crypto, Stocks, Deposits, Loans, Income, Expenses
+<div class="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
+    <!-- Header -->
+    <div>
+        <h1 class="text-2xl font-bold mb-1" style="color: var(--wd-text-primary);">Upload Financial Data</h1>
+        <p class="text-sm" style="color: var(--wd-text-muted);">Import your Excel portfolio file to get started</p>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="rounded-xl overflow-hidden shadow-sm" style="border: 1px solid var(--wd-border-subtle); background-color: var(--wd-bg-card);">
+        <div class="p-6">
+            <form id="uploadForm" enctype="multipart/form-data" class="space-y-6">
+                <!-- File Drop Zone -->
+                <div>
+                    <label class="block text-sm font-medium mb-3" style="color: var(--wd-text-secondary);" for="fileInput">
+                        Select Excel File (.xlsx or .xls)
+                    </label>
+                    <div id="dropZone" class="flex flex-col items-center justify-center w-full h-48 rounded-xl cursor-pointer transition-all duration-200"
+                         style="border: 2px dashed var(--wd-border-subtle);"
+                         tabindex="0" role="button" aria-label="Drop zone for uploading Excel files. Click or drag and drop a file.">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <svg class="w-12 h-12 mb-4" style="color: var(--wd-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <p class="mb-2 text-sm" style="color: var(--wd-text-secondary);">
+                                <span style="color: var(--wd-accent); font-weight: 600;">Click to upload</span> or drag and drop
+                            </p>
+                            <p class="text-xs" style="color: var(--wd-text-muted);">XLSX or XLS files</p>
+                        </div>
+                        <input id="fileInput" type="file" name="file" class="hidden" accept=".xlsx,.xls" aria-labelledby="fileLabel" />
+                    </div>
+
+                    <!-- File Type Badge (Task 4.2) -->
+                    <div id="fileBadge" class="mt-2 hidden flex items-center gap-2">
+                        <svg id="badgeIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"></svg>
+                        <span id="badgeText" class="text-xs font-medium"></span>
+                    </div>
+
+                    <!-- Selected File Name -->
+                    <div id="fileNameDisplay" class="mt-2 text-sm hidden" style="color: var(--wd-text-secondary);"></div>
+
+                    <!-- Animated Progress Bar (Task 4.1) -->
+                    <div id="progressContainer" class="mt-4 hidden">
+                        <div class="w-full rounded-full h-1" style="background-color: var(--wd-bg-secondary);">
+                            <div class="progress-bar-fill" id="progressFill" style="width: 0%;"></div>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary">Upload & Analyze</button>
-                </form>
-
-                <div id="loading" class="text-center mt-3 d-none">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p>Parsing your financial data...</p>
                 </div>
 
-                <div id="error" class="alert alert-danger mt-3 d-none"></div>
+                <!-- Submit Button -->
+                <button type="submit" class="w-full px-6 py-3 rounded-lg font-medium shadow-sm text-lg"
+                        style="background-color: var(--wd-accent); color: white;"
+                        aria-label="Upload and analyze the selected file">
+                    Upload &amp; Analyze
+                </button>
+            </form>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center mt-6 hidden">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--wd-accent);"></div>
+                <p class="mt-2" style="color: var(--wd-text-secondary);">Parsing your financial data...</p>
+            </div>
+
+            <!-- Error Message (aria-live for screen readers - Task 4.3) -->
+            <div id="errorMessage" class="mt-6 hidden rounded-lg p-4" style="background-color: var(--wd-error); color: white;" role="alert" aria-live="polite">
+                <p class="text-sm" id="errorText"></p>
             </div>
         </div>
+    </div>
 
-        <div class="card mt-4">
-            <div class="card-header">
-                <h4>How It Works</h4>
-            </div>
-            <div class="card-body">
-                <ol>
-                    <li>Upload your Excel file with asset sheets</li>
-                    <li>System auto-detects asset types and builds Wealth Pyramid</li>
-                    <li>View interactive dashboard with net worth, risk analysis</li>
-                    <li>Ask AI for personalized financial advice (Gemini 1.5 Pro or local Ollama)</li>
-                </ol>
-                <p class="text-muted">🔒 Privacy First: All data stays on your computer. No cloud storage.</p>
-            </div>
+    <!-- How It Works -->
+    <div class="rounded-xl overflow-hidden shadow-sm" style="border: 1px solid var(--wd-border-subtle); background-color: var(--wd-bg-card);">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold mb-4" style="color: var(--wd-text-primary);">📋 How It Works</h3>
+            <ol class="space-y-4 text-sm" style="color: var(--wd-text-secondary);">
+                <li class="flex items-start gap-3">
+                    <span class="rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                          style="background-color: var(--wd-accent-light); color: var(--wd-accent);">1</span>
+                    <span>Upload your Excel file with asset sheets</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                          style="background-color: var(--wd-accent-light); color: var(--wd-accent);">2</span>
+                    <span>System auto-detects asset types and builds Wealth Pyramid</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                          style="background-color: var(--wd-accent-light); color: var(--wd-accent);">3</span>
+                    <span>View interactive dashboard with net worth, risk analysis</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                          style="background-color: var(--wd-accent-light); color: var(--wd-accent);">4</span>
+                    <span>Ask AI for personalized financial advice (oMLX, Gemini, or local Ollama)</span>
+                </li>
+            </ol>
+            <p class="text-sm mt-4" style="color: var(--wd-text-muted);">🔒 Privacy First: All data stays on your computer. No cloud storage.</p>
         </div>
     </div>
 </div>
 
 <script>
-document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fileInput = document.getElementById('file');
-    const file = fileInput.files[0];
+(function() {
+    'use strict';
 
-    if (!file) return;
+    var fileInput = document.getElementById('fileInput');
+    var dropZone = document.getElementById('dropZone');
+    var fileNameDisplay = document.getElementById('fileNameDisplay');
+    var fileBadge = document.getElementById('fileBadge');
+    var badgeIcon = document.getElementById('badgeIcon');
+    var badgeText = document.getElementById('badgeText');
+    var progressContainer = document.getElementById('progressContainer');
+    var progressFill = document.getElementById('progressFill');
+    var loadingState = document.getElementById('loadingState');
+    var errorMessage = document.getElementById('errorMessage');
+    var errorText = document.getElementById('errorText');
 
-    const formData = new FormData();
-    formData.append('file', file);
-
-    document.getElementById('loading').classList.remove('d-none');
-    document.getElementById('error').classList.add('d-none');
-
-    try {
-        const response = await fetch('/upload/excel', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            window.location.href = data.redirect;
+    // Task 4.2: File-type badge on selection
+    function showFileBadge(valid) {
+        var fileName = fileInput.files[0] ? fileInput.files[0].name : '';
+        if (valid) {
+            badgeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>';
+            badgeIcon.style.color = 'var(--wd-success)';
+            badgeText.textContent = '✓ Valid file: ' + fileName;
+            badgeText.style.color = 'var(--wd-success)';
         } else {
-            throw new Error(data.detail || 'Upload failed');
+            badgeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
+            badgeIcon.style.color = 'var(--wd-error)';
+            badgeText.textContent = '✕ Invalid file type. Please use .xlsx or .xls';
+            badgeText.style.color = 'var(--wd-error)';
         }
-    } catch (error) {
-        document.getElementById('error').textContent = error.message;
-        document.getElementById('error').classList.remove('d-none');
-    } finally {
-        document.getElementById('loading').classList.add('d-none');
+        fileBadge.classList.remove('hidden');
     }
-});
+
+    function clearFileBadge() {
+        fileBadge.classList.add('hidden');
+    }
+
+    // Show selected file name
+    fileInput.addEventListener('change', function() {
+        var file = fileInput.files[0];
+        if (file) {
+            fileNameDisplay.textContent = 'Selected: ' + file.name;
+            fileNameDisplay.classList.remove('hidden');
+            var isValid = /\.(xlsx|xls)$/i.test(file.name);
+            showFileBadge(isValid);
+        } else {
+            fileNameDisplay.classList.add('hidden');
+            clearFileBadge();
+        }
+    });
+
+    // Drag and drop visual feedback
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--wd-accent)';
+        dropZone.style.backgroundColor = 'var(--wd-accent-light)';
+    });
+    dropZone.addEventListener('dragleave', function() {
+        dropZone.style.borderColor = 'var(--wd-border-subtle)';
+        dropZone.style.backgroundColor = '';
+    });
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--wd-border-subtle)';
+        dropZone.style.backgroundColor = '';
+        fileInput.files = e.dataTransfer.files;
+        fileInput.dispatchEvent(new Event('change'));
+    });
+    // Allow clicking the drop zone to trigger file picker
+    dropZone.addEventListener('click', function(e) {
+        if (e.target !== fileInput) fileInput.click();
+    });
+    // Allow keyboard activation of drop zone
+    dropZone.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInput.click();
+        }
+    });
+
+    // Task 4.1: Animated progress bar simulation
+    function startProgress() {
+        progressContainer.classList.remove('hidden');
+        progressFill.style.width = '0%';
+        // Simulate gradual fill (actual file size percentage is approximated)
+        var frames = 0;
+        var interval = setInterval(function() {
+            frames++;
+            var pct = Math.min(frames * 3, 90); // Cap at 90% until server responds
+            progressFill.style.width = pct + '%';
+            if (frames >= 30) clearInterval(interval);
+        }, 50);
+        return interval;
+    }
+
+    function completeProgress() {
+        progressFill.style.width = '100%';
+        setTimeout(function() {
+            progressContainer.classList.add('hidden');
+        }, 500);
+    }
+
+    // Handle form submission (preserved from original)
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var file = fileInput.files[0];
+
+        if (!file) {
+            showError('Please select a file to upload.');
+            return;
+        }
+
+        var progressBarInterval = startProgress();
+        loadingState.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+
+        var formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/upload/excel', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                completeProgress();
+                showToast('File uploaded successfully!', 'success');
+                window.location.href = data.redirect;
+            } else {
+                throw new Error(data.detail || 'Upload failed');
+            }
+        } catch (error) {
+            clearInterval(progressBarInterval);
+            completeProgress();
+            showError(error.message);
+        } finally {
+            loadingState.classList.add('hidden');
+        }
+    });
+
+    function showError(msg) {
+        errorText.textContent = msg;
+        errorMessage.classList.remove('hidden');
+    }
+})();
 </script>
 {% endblock %}

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Wealth Dashboard</title>
+    <!-- Tailwind CSS for modern utility styling -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- Chart.js for beautiful modern charts -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        @import url('https://googleapis.com');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+        }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen flex">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-[#111827] border-r border-slate-800 p-6 flex flex-col justify-between">
+        <div>
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white">W</div>
+                <span class="text-lg font-semibold tracking-wide text-white">WealthOS</span>
+            </div>
+
+            <nav class="space-y-1">
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"></path></svg>
+                    Dashboard
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Upload Data
+                </a>
+                <div class="pt-4 mt-4 border-t border-slate-800/60">
+                    <span class="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Settings</span>
+                </div>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                    Configuration
+                </a>
+            </nav>
+        </div>
+        <div class="text-xs text-slate-500">v1.2.4 &bull; Secure Session</div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-8 overflow-y-auto">
+        <!-- Top Header Status Bar -->
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Financial Overview</h1>
+                <p class="text-sm text-slate-400">Real-time status of your assets and risks structure.</p>
+            </div>
+            <div class="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-xl text-amber-400 text-sm font-medium">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                14 stale records detected
+            </div>
+        </header>
+
+        <!-- KPI Summary row -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-[#111827] border border-slate-800/80 p-6 rounded-2xl">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Net Worth</span>
+                <div class="text-3xl font-bold text-white mt-1">0.56M <span class="text-sm text-slate-500 font-normal">RUB</span></div>
+                <div class="w-full bg-slate-800 h-2 rounded-full mt-4 overflow-hidden">
+                    <div class="bg-blue-500 h-full rounded-full" style="width: 56%"></div>
+                </div>
+            </div>
+            <div class="bg-[#111827] border border-slate-800/80 p-6 rounded-2xl">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Risk Level</span>
+                <div class="text-3xl font-bold text-emerald-400 mt-1">2.4 <span class="text-sm text-slate-500 font-normal">/ 10</span></div>
+                <div class="w-full bg-slate-800 h-2 rounded-full mt-4 overflow-hidden">
+                    <div class="bg-emerald-500 h-full rounded-full" style="width: 24%"></div>
+                </div>
+            </div>
+            <div class="bg-[#111827] border border-slate-800/80 p-6 rounded-2xl">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Primary Asset Class</span>
+                <div class="text-3xl font-bold text-white mt-1">Real Estate</div>
+                <div class="text-sm text-slate-400 mt-3">Comprises 89.7% of total portfolio</div>
+            </div>
+        </section>
+
+        <!-- Analytics Grid -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Card 1: Wealth Pyramid -->
+            <div class="bg-[#111827] border border-slate-800/80 p-6 rounded-2xl flex flex-col">
+                <h3 class="text-base font-semibold text-white mb-1">Wealth Pyramid</h3>
+                <p class="text-xs text-slate-400 mb-6">Risk structure distribution across asset tiers.</p>
+                <div class="flex-1 min-h-[300px] flex items-center justify-center">
+                    <canvas id="pyramidChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Card 2: Asset Allocation -->
+            <div class="bg-[#111827] border border-slate-800/80 p-6 rounded-2xl flex flex-col">
+                <h3 class="text-base font-semibold text-white mb-1">Asset Allocation</h3>
+                <p class="text-xs text-slate-400 mb-6">Percentage breakdown by category.</p>
+                <div class="flex-1 min-h-[300px] flex items-center justify-center">
+                    <div class="w-[260px]">
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Chart Configuration Script -->
+    <script>
+        // Wealth Pyramid (Horizontal Bar Chart)
+        const ctxPyramid = document.getElementById('pyramidChart').getContext('2d');
+        new Chart(ctxPyramid, {
+            type: 'bar',
+            data: {
+                labels: ['Foundation Assets', 'Growth Assets', 'High-Risk Assets'],
+                datasets: [{
+                    data:,
+                    backgroundColor: ['#10b981', '#3b82f6', '#f43f5e'],
+                    borderRadius: 8,
+                    borderSkipped: false,
+                    barThickness: 32
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+                    y: { grid: { display: false }, ticks: { color: '#f1f5f9', font: { weight: '500' } } }
+                }
+            }
+        });
+
+        // Asset Allocation (Donut / Pie Chart variant)
+        const ctxAlloc = document.getElementById('allocationChart').getContext('2d');
+        new Chart(ctxAlloc, {
+            type: 'doughnut',
+            data: {
+                labels: ['Real Estate', 'Crypto', 'Deposits', 'Stocks', 'Precious Metals'],
+                datasets: [{
+                    data: [89.7, 7.7, 1.2, 1.0, 0.4],
+                    backgroundColor: ['#0ea5e9', '#f59e0b', '#6366f1', '#ec4899', '#14b8a6'],
+                    borderWidth: 0,
+                    weight: 0.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#94a3b8', boxWidth: 12, padding: 16, font: { size: 12 } }
+                    }
+                },
+                cutout: '75%'
+            }
+        });
+    </script>
+</body>
+</html>

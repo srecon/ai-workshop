@@ -7,8 +7,12 @@ import os
 import uuid
 from dotenv import load_dotenv
 from datetime import datetime
+import contextvars
 
-from models import SessionLocal, Asset, Liability, Income, Expense, UserOverride, get_stale_records
+from models import (
+    Asset, Liability, Income, Expense, UserOverride, FinancialGoal,
+    get_stale_records, SessionLocal as _SessionLocal,
+)
 from parser import WealthParser
 from metrics import MetricsCalculator
 from charts import *
@@ -17,6 +21,28 @@ from llm_client import LLMClient
 load_dotenv()
 
 app = FastAPI(title="Intelligent Wealth Dashboard")
+
+
+# Module-level variable for test session injection.
+# Tests set this before making requests; production code ignores it.
+_test_db_session = None
+
+
+def get_session(db_session=None):
+    """Return a database session.
+
+    Production code calls ``get_session()`` with no arguments and gets a
+    real connection to the file-based SQLite database.
+
+    Tests call ``get_session(db_session=test_session)`` to route all queries
+    into their in-memory fixture instead of the production database.
+    """
+    if db_session is not None:
+        return db_session
+    global _test_db_session
+    if _test_db_session is not None:
+        return _test_db_session
+    return _SessionLocal()
 
 # IMPORTANT FIX: Set templates directory correctly
 templates = Jinja2Templates(directory="templates")
@@ -76,6 +102,13 @@ async def upload_page(request: Request):
     """Main upload page"""
     return templates.TemplateResponse("upload.html", {"request": request})
 
+
+@app.get("/upload", response_class=HTMLResponse)
+async def upload_redirect(request: Request):
+    """Redirect /upload to / (upload page)"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/", status_code=302)
+
 @app.post("/upload/excel")
 async def upload_excel(file: UploadFile = File(...)):
     """Upload and parse Excel file"""
@@ -89,49 +122,49 @@ async def upload_excel(file: UploadFile = File(...)):
     
     # Store in database
     session_id = str(uuid.uuid4())
-    db = SessionLocal()
-    
+    db = get_session()
+
     try:
         # Clear previous data (simple approach - delete all)
         db.query(Asset).delete()
         db.query(Liability).delete()
         db.query(Income).delete()
         db.query(Expense).delete()
-        
+
         # Store assets
         for asset in data['assets']:
             db_asset = Asset(**asset)
             db.add(db_asset)
-        
+
         # Store liabilities
         for liability in data['liabilities']:
             db_liability = Liability(**liability)
             db.add(db_liability)
-        
+
         # Store income
         for income in data['income_streams']:
             db_income = Income(**income)
             db.add(db_income)
-        
+
         # Store expenses
         for expense in data['expenses']:
             db_expense = Expense(**expense)
             db.add(db_expense)
-        
+
         db.commit()
-        
+
         # Store session mapping
         session_data[session_id] = {
             'asset_count': len(data['assets']),
             'liability_count': len(data['liabilities'])
         }
-        
+
         return JSONResponse({
             'session_id': session_id,
             'stats': data['stats'],
             'redirect': f'/dashboard/{session_id}'
         })
-        
+
     except Exception as e:
         db.rollback()
         print(f"Database error: {str(e)}")  # For debugging
@@ -142,7 +175,7 @@ async def upload_excel(file: UploadFile = File(...)):
 @app.get("/dashboard/{session_id}", response_class=HTMLResponse)
 async def dashboard(request: Request, session_id: str):
     """Display wealth dashboard"""
-    db = SessionLocal()
+    db = get_session()
     
     try:
         # Fetch data from database
@@ -198,7 +231,8 @@ async def dashboard(request: Request, session_id: str):
 @app.post("/api/analyze")
 async def analyze_with_llm(session_id: str, provider: str = "omlx"):
     """Analyze portfolio with selected LLM"""
-    db = SessionLocal()
+    print(f"\n[ANALYZE] === START === session_id={session_id}, provider={provider}")
+    db = get_session()
 
     try:
         # Fetch current metrics
@@ -207,7 +241,9 @@ async def analyze_with_llm(session_id: str, provider: str = "omlx"):
         income_streams = db.query(Income).all()
         expenses = db.query(Expense).all()
 
-        assets_dict = [{'current_value': a.current_value, 'asset_type': a.asset_type} for a in assets]
+        print(f"[ANALYZE] Records: assets={len(assets)}, liabilities={len(liabilities)}, income={len(income_streams)}, expenses={len(expenses)}")
+
+        assets_dict = [{'current_value': a.current_value, 'asset_type': a.asset_type, 'category': a.category} for a in assets]
         liabilities_dict = [{'remaining_balance': l.remaining_balance} for l in liabilities]
         income_dict = [{'monthly_amount': i.monthly_amount} for i in income_streams]
         expenses_dict = [{'monthly_amount': e.monthly_amount} for e in expenses]
@@ -215,8 +251,12 @@ async def analyze_with_llm(session_id: str, provider: str = "omlx"):
         calculator = MetricsCalculator(assets_dict, liabilities_dict, income_dict, expenses_dict)
         metrics = calculator.get_all_metrics()
 
+        print(f"[ANALYZE] Metrics: net_worth={metrics.get('net_worth')}, cashflow={metrics.get('monthly_cashflow')}, risk={metrics.get('risk', {}).get('level')}")
+
         # Get LLM analysis
+        print(f"[ANALYZE] Calling llm_client.analyze_portfolio(provider={provider})...")
         analysis = llm_client.analyze_portfolio(metrics, provider)
+        print(f"[ANALYZE] Analysis returned (length={len(analysis)} chars)")
 
         return JSONResponse({
             'analysis': analysis,
@@ -225,7 +265,9 @@ async def analyze_with_llm(session_id: str, provider: str = "omlx"):
         })
 
     except Exception as e:
-        print(f"Analysis error: {str(e)}")
+        print(f"[ANALYZE] CRITICAL ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(500, f"Analysis error: {str(e)}")
     finally:
         db.close()
@@ -233,7 +275,7 @@ async def analyze_with_llm(session_id: str, provider: str = "omlx"):
 @app.post("/api/ask")
 async def ask_followup(question: str, session_id: str, provider: str = "omlx"):
     """Ask follow-up question"""
-    db = SessionLocal()
+    db = get_session()
 
     try:
         # Get current metrics as context
@@ -286,7 +328,7 @@ async def test_ollama():
 @app.get("/debug-data")
 async def debug_data():
     """Debug endpoint to see what data is in the database"""
-    db = SessionLocal()
+    db = get_session()
     try:
         assets = db.query(Asset).all()
         liabilities = db.query(Liability).all()
@@ -309,6 +351,57 @@ async def debug_data():
 async def debug_upload():
     """Test uploading without saving to DB"""
     return templates.TemplateResponse("debug_upload.html", {"request": request})
+
+
+# =============================================================================
+# Task Group 7: API endpoints
+# =============================================================================
+
+@app.get("/api/stale-records")
+async def api_stale_records():
+    """Return all stale assets and liabilities as JSON.
+
+    A record is stale when valuation_date is None or older than 90 days.
+
+    Returns a list of dicts with keys:
+        name, type, days_stale, last_value, edit_url
+    """
+    db = get_session()
+    try:
+        stale_records_list = get_stale_records(db)
+        return JSONResponse({'stale_records': stale_records_list})
+    finally:
+        db.close()
+
+
+@app.get("/api/goals/progress")
+async def api_goals_progress():
+    """Return all financial goals with their progress percentages.
+
+    Each goal includes:
+        id, name, target_amount, target_date, currency,
+        progress_percentage, effective_currency
+    """
+    db = get_session()
+    try:
+        goals = db.query(FinancialGoal).all()
+        goals_data = []
+        for goal in goals:
+            goals_data.append({
+                'id': goal.id,
+                'name': goal.name,
+                'target_amount': goal.target_amount,
+                'target_date': goal.target_date.isoformat() if goal.target_date else None,
+                'currency': goal.currency,
+                'current_value': goal.current_value,
+                'progress_percentage': goal.progress_percentage,
+                'effective_currency': goal.effective_currency,
+                'description': goal.description,
+                'notes': goal.notes,
+            })
+        return JSONResponse({'goals': goals_data})
+    finally:
+        db.close()
 
 
 
