@@ -233,6 +233,7 @@ The important test is: could another developer implement the requirement without
 3.3 Validate again
 
 Back in the terminal:
+
 ```
 openspec validate <change-name>
 openspec status --change <change-name>
@@ -247,10 +248,11 @@ Step 4 — Prepare a safe development branch
 Before implementation, protect your work.
 
 In the terminal:
+
 ```git status
-git log -5 --oneline```
+git log -5 --oneline
 
-
+```
 If your working tree is clean and you're on the intended base branch, create a feature branch:
 ```git switch -c feat/financial-domain```
 
@@ -274,6 +276,7 @@ Open a fresh coding-assistant session after the requirements and design have bee
 Invoke the Superpowers ```writing-plans``` skill, or ask your assistant to use it.
 
 Then send:
+
 ```
 Create an implementation plan for the approved OpenSpec change: define-financial-domain.
 
