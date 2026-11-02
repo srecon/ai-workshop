@@ -1,6 +1,6 @@
 # Openspecs Cheat sheet
 
-##Commands
+## Commands
 
 ```
 Command	Purpose
@@ -586,3 +586,120 @@ This is a suggested order, not a requirement to create exactly eight changes. If
 
 For each capability, repeat Steps 2–10 as appropriate. A small, unambiguous change may not need an extensive brainstorming session, but it should still have clear requirements, tests, and verification.
 
+## Using custom Skills
+
+Prepare the implementation through Superpowers:
+
+```
+Read the approved OpenSpec change define-financial-domain.
+
+Use the Superpowers writing-plans skill to create a detailed implementation plan.
+
+Follow these constraints:
+- Do not change the approved requirements.
+- Identify the domain entities and their relationships.
+- Break the work into small independently testable tasks.
+- Identify the tests needed for each task.
+- Identify unresolved architecture decisions.
+- Do not write code yet.
+
+Wait for my approval of the plan.
+```
+
+Review the plan and approve it. Then,
+```ub-mode```: implement each task. This is where Uncle Bob's skill becomes particularly useful.
+
+```/ub-mode```
+Then ask the agent to execute just the first approved task.
+
+For example:
+
+```
+Using the approved implementation plan, implement task 1 only.
+
+Apply the ub-mode principles strictly.
+
+FIRST MAKE IT WORK:
+- Model the domain before implementing business logic.
+- Write a failing test before changing production code.
+- Confirm the test fails for the expected reason.
+- Implement the smallest solution that passes.
+
+THEN MAKE IT RIGHT:
+- Test observable behavior rather than implementation details.
+- Remove unnecessary complexity and duplication.
+- Refactor without changing behavior.
+- Fix root causes rather than symptoms.
+
+PRACTICE:
+- Keep a log of actions and reasons.
+- Report files changed and tests executed.
+- Keep the change small and independently verifiable.
+
+Follow the approved OpenSpec design. Do not implement task 2 or any unrelated functionality.
+
+Stop after task 1 and report the result.
+```
+This gives you a very controlled implementation cycle.
+
+## The complete workflow of the project
+
+Here is the practical sequence I would standardize.
+```
+Order	Tool	Activity
+1	OpenSpec	Define requirements and acceptance scenarios
+2	Superpowers brainstorming	Grill requirements and design
+3	OpenSpec	Update and validate approved artifacts
+4	Superpowers writing-plans	Create implementation plan
+5	ub-mode	Establish engineering discipline
+6	Superpowers TDD	Execute RED-GREEN-REFACTOR
+7	ub-mode	Make it Right and apply quality principles
+8	Superpowers code review	Review implementation
+9	OpenSpec	Verify and archive
+10	Git	Commit completed work
+```
+
+One important nuance: Superpowers TDD and ub-mode TDD are not two separate testing processes. They describe essentially the same cycle. Use one cycle, not two layers of duplicate tests.
+
+Similarly, don't ask Superpowers and ub-mode to independently redesign the same code. OpenSpec design decisions remain authoritative unless you explicitly approve a design change.
+
+## One combined prompt for your daily development work
+
+After installing ub-mode, I would use this as your standard implementation prompt:
+
+```
+We are implementing the Wealth Management Dashboard using OpenSpec and Superpowers.
+
+For this implementation session, follow these rules:
+
+1. OpenSpec is the source of truth for approved requirements, specifications, and design decisions.
+2. Use Superpowers for planning, TDD, execution, and code review.
+3. Apply the ub-mode skill to every code change.
+
+Before implementing:
+- Read the relevant OpenSpec change.
+- Read the approved design and implementation tasks.
+- Read the current implementation plan.
+- Identify the exact task to execute.
+
+During implementation:
+- Follow ub-mode: First Make it Work, Then Make it Right, Follow Practice.
+- Follow RED-GREEN-REFACTOR.
+- Model the domain carefully.
+- Keep business logic in independently testable functions.
+- Validate external data at system boundaries.
+- Prefer small, understandable implementations.
+- Fix root causes rather than symptoms.
+- Do not introduce unnecessary abstractions.
+- Do not implement unapproved requirements.
+
+After implementation:
+- Run relevant tests and regression tests.
+- Review complexity and duplication.
+- Use mutation testing when the required tooling is available and appropriate.
+- Report actual results. Never claim a quality check was performed if the tool was unavailable.
+- Update the implementation task status only when evidence supports completion.
+- Keep a log of actions and reasons.
+
+Stop after completing the assigned task. Report files changed, tests executed, outstanding issues, and the next task. Do not automatically start the next task.
+```
